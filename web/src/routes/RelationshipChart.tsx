@@ -8,6 +8,23 @@ import { useToast } from "../components/toastContext";
 
 type Pt = { x: number; y: number };
 
+const BOND_LABELS: Record<string, string> = {
+  ally: "Союзник",
+  rival: "Соперник",
+  family: "Семья",
+  romantic: "Роман",
+  mentor: "Наставник",
+  enemy: "Враг",
+  "owes debt": "Должен",
+  secret: "Тайна",
+  unknown: "Неясно",
+  other: "Другое",
+};
+
+function bondLabel(value: string): string {
+  return BOND_LABELS[value] ?? BOND_LABELS[value.toLowerCase()] ?? value;
+}
+
 /** Relationship chart with click/drag-to-link (R3→R4). */
 export default function RelationshipChart() {
   const { id = "" } = useParams();
@@ -88,7 +105,7 @@ export default function RelationshipChart() {
     return (
       <Scene>
         <div className="px-10 py-12">
-          <div className="glass-panel px-4 py-3 text-[13px]">Failed to load: {error}</div>
+          <div className="glass-panel px-4 py-3 text-[13px]">Не удалось загрузить: {error}</div>
         </div>
       </Scene>
     );
@@ -104,16 +121,16 @@ export default function RelationshipChart() {
         >
           <div className="glass-panel px-6 py-8 sm:px-10">
             <Link to={`/projects/${id}`} className="mb-6 inline-flex text-[13px] font-medium text-ink-muted hover:text-[var(--color-violet)]">
-              ← Dashboard
+              ← Обзор
             </Link>
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="eyebrow">Codex</p>
+                <p className="eyebrow">Кодекс</p>
                 <h1 className="font-display text-[30px] font-semibold tracking-tight text-ink-text">
-                  Relationship chart
+                  Связи
                 </h1>
                 <p className="mt-1.5 text-[13px] text-ink-muted">
-                  Drag from one character to another to link them. Continuity watches hostile bonds.
+                  Потяните от одного персонажа к другому, чтобы связать их. Связность отслеживает враждебные связи.
                 </p>
               </div>
               <button
@@ -121,19 +138,19 @@ export default function RelationshipChart() {
                 onClick={() => { setPrefill(null); setAddOpen(true); }}
                 className="btn-primary"
               >
-                + Add link
+                + Добавить связь
               </button>
             </div>
 
             {linkFrom && (
               <p className="mb-3 text-[12.5px] text-[var(--color-violet)]" aria-live="polite">
-                Linking from {byId[linkFrom]?.name ?? "…"} - drop on another character (Esc to cancel).
+                Связь от {byId[linkFrom]?.name ?? "…"} — отпустите на другом персонаже (Esc — отмена).
               </p>
             )}
 
             {chars.length < 2 ? (
               <div className="rounded-[24px] border border-dashed border-[rgba(74,91,133,0.18)] bg-white/45 px-8 py-14 text-center text-[13.5px] text-ink-muted">
-                Add at least two characters in the Codex to draw connections.
+                Добавьте в Кодекс хотя бы двух персонажей, чтобы провести связи.
               </div>
             ) : (
               <div className="overflow-hidden rounded-[24px] border border-[rgba(74,91,133,0.12)] bg-white/50 touch-none">
@@ -142,7 +159,7 @@ export default function RelationshipChart() {
                   viewBox="0 0 640 420"
                   className="h-auto w-full select-none"
                   role="img"
-                  aria-label="Character relationship chart"
+                  aria-label="Схема связей персонажей"
                   onPointerMove={(e) => {
                     if (!linkFrom || !rubber) return;
                     setRubber({ ...rubber, to: clientToSvg(e.clientX, e.clientY) });
@@ -170,7 +187,7 @@ export default function RelationshipChart() {
                         className="fill-[var(--color-ink-muted)]"
                         style={{ fontSize: 11 }}
                       >
-                        {e.label}
+                        {bondLabel(e.label)}
                       </text>
                     </g>
                   ))}
@@ -245,7 +262,7 @@ export default function RelationshipChart() {
                   <li key={e.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[rgba(74,91,133,0.1)] bg-white/60 px-4 py-2.5 text-[13px]">
                     <span className="text-ink-text">
                       <span className="font-medium">{e.source_name}</span>
-                      <span className="mx-2 text-ink-muted">· {e.label} ·</span>
+                      <span className="mx-2 text-ink-muted">· {bondLabel(e.label)} ·</span>
                       <span className="font-medium">{e.target_name}</span>
                     </span>
                     <button
@@ -254,14 +271,14 @@ export default function RelationshipChart() {
                       onClick={async () => {
                         try {
                           await api.deleteRelationship(id, e.id);
-                          toast("Link removed", "success");
+                          toast("Связь удалена", "success");
                           load();
                         } catch (err) {
                           toast(err instanceof Error ? err.message : String(err), "error");
                         }
                       }}
                     >
-                      Remove
+                      Удалить
                     </button>
                   </li>
                 ))}

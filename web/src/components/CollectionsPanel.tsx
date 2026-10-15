@@ -32,7 +32,7 @@ export default function CollectionsPanel({ projectId }: { projectId: string }) {
       setItems(list);
       setName("");
       setQuery("");
-      toast("Collection saved", "success");
+      toast("Подборка сохранена", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : String(err), "error");
     } finally {
@@ -59,10 +59,22 @@ export default function CollectionsPanel({ projectId }: { projectId: string }) {
         setHits([]);
       }
       load();
-      toast("Collection removed", "success");
+      toast("Подборка удалена", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : String(err), "error");
     }
+  }
+
+  function kindLabel(kind: string) {
+    const map: Record<string, string> = {
+      chapter: "глава",
+      relationship: "связь",
+      character: "персонаж",
+      location: "место",
+      worldbuilding: "мир",
+      item: "предмет",
+    };
+    return map[kind] ?? kind;
   }
 
   function hrefFor(h: SearchHit) {
@@ -78,42 +90,42 @@ export default function CollectionsPanel({ projectId }: { projectId: string }) {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-display text-[17px] font-semibold tracking-tight text-ink-text">
-            Collections
+            Подборки
           </h3>
           <p className="mt-0.5 text-[13px] text-ink-muted">
-            Saved searches over Codex and chapters. Semantic collections come later.
+            Сохранённый поиск по Кодексу и главам.
           </p>
         </div>
       </div>
 
       <form onSubmit={create} className="mb-4 flex flex-wrap items-end gap-2">
         <label className="min-w-[8rem] flex-1 text-[12px] font-medium text-ink-muted">
-          Name
+          Имя
           <input
             className="mt-1 w-full rounded-full border border-[rgba(96,112,153,0.17)] bg-white/70 px-3 py-2 text-[13.5px] text-ink-text outline-none focus:border-[rgba(104,103,234,0.38)]"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Optional"
+            placeholder="Необязательно"
           />
         </label>
         <label className="min-w-[12rem] flex-[2] text-[12px] font-medium text-ink-muted">
-          Query
+          Запрос
           <input
             className="mt-1 w-full rounded-full border border-[rgba(96,112,153,0.17)] bg-white/70 px-3 py-2 text-[13.5px] text-ink-text outline-none focus:border-[rgba(104,103,234,0.38)]"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. Lena, harbor, rival"
+            placeholder="например, Лена, гавань, соперник"
             required
             minLength={2}
           />
         </label>
         <button type="submit" disabled={busy || query.trim().length < 2} className="btn-secondary disabled:opacity-40">
-          {busy ? "Saving…" : "Save"}
+          {busy ? "Сохранение…" : "Сохранить"}
         </button>
       </form>
 
       {items.length === 0 ? (
-        <p className="text-[13px] text-paper-muted">No collections yet. Save a keyword search to reopen it later.</p>
+        <p className="text-[13px] text-paper-muted">Подборок пока нет. Сохраните поиск по словам, чтобы открыть его снова.</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {items.map((c) => (
@@ -132,7 +144,7 @@ export default function CollectionsPanel({ projectId }: { projectId: string }) {
               </button>
               <button
                 type="button"
-                aria-label={`Remove ${c.name}`}
+                aria-label={`Удалить ${c.name}`}
                 onClick={() => remove(c)}
                 className="rounded-full px-1.5 py-1 text-[11px] text-ink-muted hover:text-[#c85177]"
               >
@@ -146,7 +158,7 @@ export default function CollectionsPanel({ projectId }: { projectId: string }) {
       {activeId && (
         <ul className="mt-4 max-h-48 space-y-1 overflow-y-auto rounded-2xl border border-[rgba(74,91,133,0.1)] bg-white/70 p-2">
           {hits.length === 0 ? (
-            <li className="px-3 py-4 text-center text-[12.5px] text-ink-muted">No matches for this collection.</li>
+            <li className="px-3 py-4 text-center text-[12.5px] text-ink-muted">В этой подборке ничего не нашлось.</li>
           ) : (
             hits.map((h) => (
               <li key={`${h.kind}-${h.id}`}>
@@ -156,7 +168,7 @@ export default function CollectionsPanel({ projectId }: { projectId: string }) {
                 >
                   <Icon name={h.kind === "chapter" ? "scroll-text" : h.kind === "relationship" ? "waypoints" : "book-open"} className="h-3.5 w-3.5 shrink-0 text-ink-muted" />
                   <span className="min-w-0 truncate font-medium">{h.label}</span>
-                  <span className="ml-auto shrink-0 capitalize text-[11px] text-paper-muted">{h.kind}</span>
+                  <span className="ml-auto shrink-0 text-[11px] text-paper-muted">{kindLabel(h.kind)}</span>
                 </Link>
               </li>
             ))

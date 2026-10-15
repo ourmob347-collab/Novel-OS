@@ -33,26 +33,26 @@ export default function BookShape({ projectId }: { projectId: string }) {
 
   return (
     <section
-      aria-label="Shape of the book"
+      aria-label="Форма книги"
       className="mb-6 rounded-[24px] border border-[rgba(74,91,133,0.12)] bg-white/55 px-5 py-5 backdrop-blur-md"
     >
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-[18px] font-semibold tracking-tight text-ink-text">
-            Shape of the book
+            Форма книги
           </h2>
           <p className="mt-0.5 text-[12.5px] text-ink-muted">
-            How much changes in each chapter · plot, character, information, threads
+            Сколько меняется в каждой главе: сюжет, герой, сведения, нити
           </p>
         </div>
         <button type="button" onClick={load} className="btn-ghost text-[12px]">
-          Refresh
+          Обновить
         </button>
       </div>
 
       <div
         role="list"
-        aria-label="Chapters"
+        aria-label="Главы"
         className="flex items-end gap-[3px] overflow-x-auto pb-1"
       >
         {chapters.map((c) => {
@@ -66,14 +66,14 @@ export default function BookShape({ projectId }: { projectId: string }) {
               to={`/projects/${projectId}/chapters/${c.number}`}
               role="listitem"
               aria-label={
-                `Chapter ${c.number}${c.title ? `: ${c.title}` : ""} — ` +
+                `Глава ${c.number}${c.title ? `: ${c.title}` : ""} — ` +
                 (c.written
-                  ? `${c.movement} changes${sagging ? ", part of a stalled run" : ""}`
-                  : "not written yet")
+                  ? `${c.movement} сдвигов${sagging ? ", часть провисания" : ""}`
+                  : "ещё не написана")
               }
               title={
-                `Ch ${c.number}${c.title ? ` · ${c.title}` : ""}\n` +
-                (c.written ? `${c.movement} changes` : "Not written yet")
+                `Гл. ${c.number}${c.title ? ` · ${c.title}` : ""}\n` +
+                (c.written ? `${c.movement} сдвигов` : "Ещё не написана")
               }
               className="group flex w-[14px] shrink-0 flex-col items-center gap-1"
             >
@@ -95,7 +95,7 @@ export default function BookShape({ projectId }: { projectId: string }) {
 
       {(report?.stalls.length ?? 0) > 0 && (
         <ul
-          aria-label="Stalled stretches"
+          aria-label="Провисания"
           className="mt-4 space-y-1.5 border-t border-[rgba(74,91,133,0.1)] pt-3"
         >
           {report?.stalls.map((s) => (
@@ -108,7 +108,7 @@ export default function BookShape({ projectId }: { projectId: string }) {
                 to={`/projects/${projectId}/chapters/${s.start}`}
                 className="font-medium text-ink-text underline-offset-2 hover:underline"
               >
-                Ch {s.start}–{s.end}
+                Гл. {s.start}–{s.end}
               </Link>
               <span className="text-ink-muted">{s.reason}.</span>
             </li>

@@ -77,8 +77,8 @@ test("shows the pipeline flow and renders the selected stage", async () => {
   });
 
   renderAt();
-  expect(await screen.findByText("Outline")).toBeInTheDocument();
-  expect(screen.getByText("Final")).toBeInTheDocument();
+  expect((await screen.findAllByText("План")).length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Чистовик").length).toBeGreaterThan(0);
   expect(await screen.findByText("Beats")).toBeInTheDocument();
 });
 
@@ -127,6 +127,35 @@ test("Final pane auto-seeds from revised and saves edits", async () => {
 
   const editor = await screen.findByDisplayValue("Revised prose");
   await user.type(editor, " edited");
-  await user.click(screen.getByRole("button", { name: /^Save$/i }));
+  await user.click(screen.getByRole("button", { name: /^Сохранить$/ }));
   expect(saveFinalDoc).toHaveBeenCalled();
+});
+
+test("copies the draft into the clean copy", async () => {
+  vi.spyOn(client.api, "chapter").mockResolvedValue(META);
+  vi.spyOn(client.api, "chapters").mockResolvedValue([]);
+  vi.spyOn(client.api, "stages").mockResolvedValue({
+    number: 1, status: "edited",
+    outline: "# Beats", draft: "Текст черновика", revised: "Правка",
+    final: "Старый чистовик", continuity: null,
+  });
+  const promote = vi.spyOn(client.api, "promoteFinal").mockResolvedValue({
+    final: "Текст черновика", word_count: 2,
+  });
+  vi.spyOn(client.api, "getFinalDoc").mockResolvedValue({
+    doc: {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Текст черновика" }] }],
+    },
+    markdown: "Текст черновика\n",
+    word_count: 2,
+  });
+  vi.spyOn(client.api, "comments").mockResolvedValue([]);
+  vi.spyOn(client.api, "snapshots").mockResolvedValue([]);
+
+  const user = userEvent.setup();
+  renderAt();
+
+  await user.click(await screen.findByRole("button", { name: "Черновик → чистовик" }));
+  expect(promote).toHaveBeenCalledWith("p", 1, true, "draft");
 });

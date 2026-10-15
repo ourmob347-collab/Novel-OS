@@ -26,6 +26,18 @@ function flattenChapters(nodes: BinderNode[]): BinderNode[] {
   return out;
 }
 
+function ruCount(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  const word =
+    mod10 === 1 && mod100 !== 11
+      ? one
+      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+        ? few
+        : many;
+  return `${n.toLocaleString("ru-RU")} ${word}`;
+}
+
 function sceneFallback(node: BinderNode): string {
   const scenes = (node.children || []).filter((c) => c.type === "scene" && (c.synopsis || "").trim());
   if (!scenes.length) return "";
@@ -79,7 +91,7 @@ export default function ChapterBoard({
     try {
       const updated = await api.patchBinderNode(id, node.id, { synopsis: text });
       setTree(updated);
-      toast("Synopsis saved", "success");
+      toast("Синопсис сохранён", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
     } finally {
@@ -97,7 +109,7 @@ export default function ChapterBoard({
         index,
       });
       setTree(updated);
-      toast("Chapter order updated", "success");
+      toast("Порядок глав обновлён", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
     } finally {
@@ -135,7 +147,7 @@ export default function ChapterBoard({
       const updated = await api.binder(id);
       setTree(updated);
       toast(
-        r.source === "architect" ? "Synopsis refreshed" : "Synopsis drafted from outline",
+        r.source === "architect" ? "Синопсис обновлён" : "Синопсис составлен по плану",
         "success",
       );
     } catch (e) {
@@ -148,9 +160,9 @@ export default function ChapterBoard({
   if (chapters.length === 0 && cards.length === 0) {
     return (
       <div className="rounded-[24px] border border-dashed border-[rgba(74,91,133,0.18)] bg-white/45 px-8 py-12 text-center">
-        <p className="font-display text-[16px] tracking-[-0.02em] text-ink-text">No chapters planned yet</p>
+        <p className="font-display text-[16px] tracking-[-0.02em] text-ink-text">Глав пока не запланировано</p>
         <p className="mt-2 text-[12.5px] text-ink-muted">
-          Plan one with <code className="font-mono text-[11px]">plan chapter --number 1</code>
+          Запланируйте командой <code className="font-mono text-[11px]">plan chapter --number 1</code>
         </p>
       </div>
     );
@@ -174,7 +186,7 @@ export default function ChapterBoard({
   return (
     <div>
       <p className="mb-3 text-[12.5px] text-ink-muted">
-        Corkboard · edit synopses · drag cards or use ↑↓ to reorder
+        Карточки · правьте синопсисы · перетаскивайте карточки или меняйте порядок кнопками ↑↓
       </p>
       <motion.div
         variants={grid}
@@ -229,8 +241,8 @@ export default function ChapterBoard({
                     <button
                       type="button"
                       draggable={busyId == null}
-                      title="Drag to reorder"
-                      aria-label={`Drag chapter ${n} to reorder`}
+                      title="Перетащите, чтобы изменить порядок"
+                      aria-label={`Перетащите главу ${n}, чтобы изменить порядок`}
                       onDragStart={(e) => {
                         setDraggingId(node.id);
                         e.dataTransfer.effectAllowed = "move";
@@ -246,7 +258,7 @@ export default function ChapterBoard({
                     </button>
                   )}
                   <span className="text-[12px] font-medium tracking-[-0.01em] text-ink-muted">
-                    Chapter {n || "—"}
+                    Глава {n || "—"}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-1.5">
@@ -257,15 +269,15 @@ export default function ChapterBoard({
                           ? "bg-[#ffeaf1] text-[#c85177]"
                           : "bg-[#fff2dc] text-[#c47a1b]"
                       }`}
-                      title="Continuity findings"
+                      title="Замечания непрерывности"
                     >
                       <Icon
                         name={badge.critical > 0 ? "shield-alert" : "triangle-alert"}
                         className="h-3 w-3"
                       />
                       {badge.critical > 0
-                        ? `${badge.critical} critical`
-                        : `${badge.warning} warning`}
+                        ? `${badge.critical} критично`
+                        : `${badge.warning} предупреждение`}
                     </span>
                   )}
                   <StatusPill status={meta?.status || node.status || "planned"} />
@@ -276,7 +288,7 @@ export default function ChapterBoard({
                 to={`/projects/${id}/chapters/${n}`}
                 className="mt-2.5 font-display text-[17px] font-semibold leading-snug tracking-[-0.02em] text-ink-text transition-colors hover:text-[var(--color-violet)]"
               >
-                {node.title || meta?.title || "Untitled"}
+                {node.title || meta?.title || "Без названия"}
               </Link>
 
               <textarea
@@ -284,7 +296,7 @@ export default function ChapterBoard({
                 disabled={!editable || busyId === node.id}
                 onChange={(e) => setDrafts((d) => ({ ...d, [node.id]: e.target.value }))}
                 onBlur={() => { if (editable) void saveSynopsis(node); }}
-                placeholder="Add a synopsis…"
+                placeholder="Добавьте синопсис…"
                 rows={4}
                 className="mt-3 w-full resize-y rounded-xl border border-[rgba(96,112,153,0.14)] bg-white/70 px-3 py-2.5 text-[13px] leading-relaxed text-ink-text placeholder:text-paper-muted focus:border-[rgba(104,103,234,0.45)] focus:outline-none disabled:opacity-60"
               />
@@ -295,16 +307,16 @@ export default function ChapterBoard({
                   disabled={!editable || busyId != null}
                   onClick={() => void refreshSynopsis(node)}
                   className="rounded-full border border-[rgba(96,112,153,0.16)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-ink-muted transition-colors hover:text-[var(--color-violet)] disabled:opacity-40"
-                  title="Architect writes a corkboard synopsis"
+                  title="Архитектор пишет синопсис для карточки"
                 >
-                  {busyId === node.id ? "Refreshing…" : "Refresh with Architect"}
+                  {busyId === node.id ? "Обновление…" : "Обновить с Архитектором"}
                 </button>
                 {editable && (
                   <div className="flex shrink-0">
                     <button
                       type="button"
-                      title="Move earlier"
-                      aria-label={`Move chapter ${n} up`}
+                      title="Раньше"
+                      aria-label={`Переместить главу ${n} раньше`}
                       disabled={!canUp || busyId != null}
                       onClick={() => void move(node, -1)}
                       className="flex h-7 w-6 items-center justify-center rounded-lg text-[11px] font-semibold hover:bg-white/80 disabled:opacity-25"
@@ -313,8 +325,8 @@ export default function ChapterBoard({
                     </button>
                     <button
                       type="button"
-                      title="Move later"
-                      aria-label={`Move chapter ${n} down`}
+                      title="Позже"
+                      aria-label={`Переместить главу ${n} позже`}
                       disabled={!canDown || busyId != null}
                       onClick={() => void move(node, 1)}
                       className="flex h-7 w-6 items-center justify-center rounded-lg text-[11px] font-semibold hover:bg-white/80 disabled:opacity-25"
@@ -327,12 +339,15 @@ export default function ChapterBoard({
 
               <div className="mt-3 flex items-center gap-2 text-[11.5px] text-ink-muted">
                 <span className="nums">
-                  {(meta?.word_count ?? node.word_count ?? 0).toLocaleString()} words
+                  {ruCount(meta?.word_count ?? node.word_count ?? 0, "слово", "слова", "слов")}
+                  {(meta?.char_count ?? 0) > 0
+                    ? ` · ${ruCount(meta?.char_count ?? 0, "символ", "символа", "символов")}`
+                    : ""}
                 </span>
                 {(meta?.pov || node.pov) && (
                   <>
                     <span className="text-paper-muted">·</span>
-                    <span className="truncate">POV {meta?.pov || node.pov}</span>
+                    <span className="truncate">От лица {meta?.pov || node.pov}</span>
                   </>
                 )}
               </div>

@@ -6,11 +6,15 @@ import { useToast } from "./toastContext";
 import type { IconName } from "../icons/registry";
 
 const TYPE_OPTIONS: { value: CodexEntryType; label: string; icon: IconName }[] = [
-  { value: "character", label: "Character", icon: "users" },
-  { value: "location", label: "Location", icon: "map-pin" },
-  { value: "worldbuilding", label: "World", icon: "landmark" },
-  { value: "item", label: "Item", icon: "package" },
+  { value: "character", label: "Персонаж", icon: "users" },
+  { value: "location", label: "Место", icon: "map-pin" },
+  { value: "worldbuilding", label: "Мир", icon: "landmark" },
+  { value: "item", label: "Предмет", icon: "package" },
 ];
+
+const TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  TYPE_OPTIONS.map((o) => [o.value, o.label]),
+);
 
 /** Pick an existing Codex entry or create one from the selection. */
 export default function LinkCodexModal({
@@ -69,8 +73,8 @@ export default function LinkCodexModal({
         role: entryType === "character" ? "supporting" : undefined,
       });
       const created = list.find((x) => x.name.toLowerCase() === name.trim().toLowerCase()) ?? list[0];
-      if (!created) throw new Error("Could not create entry");
-      toast(`Created ${created.name}`, "success");
+      if (!created) throw new Error("Не удалось создать запись");
+      toast(`Создано: ${created.name}`, "success");
       onLinked(created);
       onClose();
     } catch (err) {
@@ -81,21 +85,21 @@ export default function LinkCodexModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={mode === "link" ? "Link to Codex" : "Create Codex Entry"}>
+    <Modal open={open} onClose={onClose} title={mode === "link" ? "Связать с Кодексом" : "Создать запись Кодекса"}>
       {mode === "link" ? (
         <div>
-          <Field label="Search">
+          <Field label="Поиск">
             <input
               autoFocus
               className={fieldClass}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Find a character, place, or item…"
+              placeholder="Найти персонажа, место или предмет…"
             />
           </Field>
           <ul className="max-h-56 space-y-1 overflow-y-auto">
             {filtered.length === 0 && (
-              <li className="py-6 text-center text-[13px] text-ink-muted">No matching entries.</li>
+              <li className="py-6 text-center text-[13px] text-ink-muted">Нет подходящих записей.</li>
             )}
             {filtered.map((e) => (
               <li key={`${e.entry_type}-${e.id}`}>
@@ -105,33 +109,33 @@ export default function LinkCodexModal({
                   className="flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-[rgba(104,103,234,0.08)]"
                 >
                   <span className="font-medium text-ink-text">{e.name}</span>
-                  <span className="text-[11.5px] capitalize text-ink-muted">{e.entry_type}</span>
+                  <span className="text-[11.5px] capitalize text-ink-muted">{TYPE_LABELS[e.entry_type] ?? e.entry_type}</span>
                 </button>
               </li>
             ))}
           </ul>
           <div className="mt-4 flex justify-end">
-            <button type="button" onClick={onClose} className="btn-ghost">Cancel</button>
+            <button type="button" onClick={onClose} className="btn-ghost">Отмена</button>
           </div>
         </div>
       ) : (
         <form onSubmit={create}>
-          <Field label="Type">
+          <Field label="Тип">
             <ChoiceGroup
-              label="Type"
+              label="Тип"
               variant="cards"
               value={entryType}
               onChange={setEntryType}
               options={TYPE_OPTIONS}
             />
           </Field>
-          <Field label="Name">
+          <Field label="Имя">
             <input autoFocus className={fieldClass} value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
           <div className="mt-6 flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="btn-ghost">Cancel</button>
+            <button type="button" onClick={onClose} className="btn-ghost">Отмена</button>
             <button type="submit" disabled={!name.trim() || busy} className="btn-primary disabled:opacity-40">
-              {busy ? "Creating…" : "Create & link"}
+              {busy ? "Создание…" : "Создать и связать"}
             </button>
           </div>
         </form>

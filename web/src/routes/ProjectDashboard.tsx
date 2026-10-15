@@ -33,24 +33,46 @@ import { useToast } from "../components/toastContext";
 import { useRunPhase } from "../hooks/useRunPhase";
 import type { IconName } from "../icons/registry";
 
-const ROLE_OPTIONS = (["protagonist", "antagonist", "supporting", "minor"] as const).map((r) => ({
-  value: r,
-  label: r[0].toUpperCase() + r.slice(1),
-}));
+const ROLE_OPTIONS: { value: "protagonist" | "antagonist" | "supporting" | "minor"; label: string }[] = [
+  { value: "protagonist", label: "Протагонист" },
+  { value: "antagonist", label: "Антагонист" },
+  { value: "supporting", label: "Второстепенный" },
+  { value: "minor", label: "Эпизодический" },
+];
+
+const ROLE_LABEL: Record<string, string> = Object.fromEntries(
+  ROLE_OPTIONS.map((r) => [r.value, r.label]),
+);
+
+const ENTRY_TYPE_LABEL: Record<string, string> = {
+  character: "Персонаж",
+  location: "Место",
+  worldbuilding: "Мир",
+  item: "Предмет",
+};
+
+function ruPlural(n: number, one: string, few: string, many: string) {
+  const abs = Math.abs(n) % 100;
+  const last = abs % 10;
+  if (abs > 10 && abs < 20) return many;
+  if (last > 1 && last < 5) return few;
+  if (last === 1) return one;
+  return many;
+}
 
 const CODEX_FILTERS: { id: "all" | CodexEntryType; label: string; icon: IconName }[] = [
-  { id: "all", label: "All", icon: "layers" },
-  { id: "character", label: "Characters", icon: "users" },
-  { id: "location", label: "Locations", icon: "map-pin" },
-  { id: "worldbuilding", label: "World", icon: "landmark" },
-  { id: "item", label: "Items", icon: "package" },
+  { id: "all", label: "Все", icon: "layers" },
+  { id: "character", label: "Персонажи", icon: "users" },
+  { id: "location", label: "Места", icon: "map-pin" },
+  { id: "worldbuilding", label: "Мир", icon: "landmark" },
+  { id: "item", label: "Предметы", icon: "package" },
 ];
 
 const TYPE_OPTIONS: { value: CodexEntryType; label: string; icon: IconName; hint: string }[] = [
-  { value: "character", label: "Character", icon: "users", hint: "People" },
-  { value: "location", label: "Location", icon: "map-pin", hint: "Places" },
-  { value: "worldbuilding", label: "World", icon: "landmark", hint: "Systems" },
-  { value: "item", label: "Item", icon: "package", hint: "Objects" },
+  { value: "character", label: "Персонаж", icon: "users", hint: "Люди" },
+  { value: "location", label: "Место", icon: "map-pin", hint: "Места" },
+  { value: "worldbuilding", label: "Мир", icon: "landmark", hint: "Системы" },
+  { value: "item", label: "Предмет", icon: "package", hint: "Предметы" },
 ];
 
 export default function ProjectDashboard() {
@@ -128,7 +150,7 @@ export default function ProjectDashboard() {
       <Scene>
         <div className="px-10 py-12">
           <div className="glass-panel px-4 py-3 text-[13px] text-ink-text">
-            Failed to load: {error}
+            Не удалось загрузить: {error}
           </div>
         </div>
       </Scene>
@@ -170,7 +192,7 @@ export default function ProjectDashboard() {
               to="/"
               className="mb-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-muted transition-colors hover:text-[var(--color-violet)]"
             >
-              ← Library
+              ← Библиотека
             </Link>
 
             <header className="mb-9">
@@ -178,7 +200,7 @@ export default function ProjectDashboard() {
               <h1 className="font-display text-[32px] font-semibold leading-tight tracking-[-0.035em] text-ink-text text-balance sm:text-[38px]">
                 {project.title}
               </h1>
-              <p className="mt-2 text-[14px] text-ink-muted">by {project.author || "Unknown"}</p>
+              <p className="mt-2 text-[14px] text-ink-muted">Автор: {project.author || "Неизвестно"}</p>
               {project.premise ? (
                 <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-ink-muted">
                   {project.premise}
@@ -190,25 +212,25 @@ export default function ProjectDashboard() {
               </div>
 
               <div className="mt-7 flex flex-wrap gap-8">
-                <Stat label="Chapters" value={String(project.chapter_count)} />
-                <Stat label="Written" value={`${drafted}/${project.chapter_count || 0}`} />
-                <Stat label="Words" value={words.toLocaleString()} />
+                <Stat label="Главы" value={String(project.chapter_count)} />
+                <Stat label="Написано" value={`${drafted}/${project.chapter_count || 0}`} />
+                <Stat label="Слов" value={words.toLocaleString()} />
               </div>
 
               <div className="mt-7 flex flex-wrap items-center gap-2.5">
                 <Action onClick={() => run("plan_outline", { chapters: 12, words: 24000 })}
                         busy={runningStage === "plan_outline"} disabled={isRunning}>
-                  Plan Outline
+                  Составить план
                 </Action>
                 <Action onClick={() => run("plan_chapter", { number: nextChapter })}
                         busy={runningStage === "plan_chapter"} disabled={isRunning}>
-                  Plan Chapter {nextChapter}
+                  План главы {nextChapter}
                 </Action>
                 <a href={api.exportUrl(id)} download={`${id}.md`} className="btn-secondary">
-                  Export
+                  Экспорт
                 </a>
                 <ChoiceGroup
-                  label="Content rating"
+                  label="Рейтинг"
                   variant="segmented"
                   size="sm"
                   value={(project.content_rating === "mature" ? "mature" : "general") as "general" | "mature"}
@@ -216,20 +238,20 @@ export default function ProjectDashboard() {
                     try {
                       const p = await api.updateProject(id, { content_rating: next });
                       setProject(p);
-                      toast(next === "mature" ? "Marked Mature" : "Marked General", "success");
+                      toast(next === "mature" ? "Отмечено: для взрослых" : "Отмечено: общий", "success");
                     } catch (e) {
                       toast(e instanceof Error ? e.message : String(e), "error");
                     }
                   }}
                   options={[
-                    { value: "general", label: "General" },
-                    { value: "mature", label: "Mature" },
+                    { value: "general", label: "Общий" },
+                    { value: "mature", label: "Для взрослых" },
                   ]}
                 />
                 {isRunning && (
                   <span className="ml-1 inline-flex items-center gap-2 text-[12.5px] text-ink-muted" aria-live="polite">
                     <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--color-violet)]" />
-                    Agent running…
+                    Агент работает…
                   </span>
                 )}
               </div>
@@ -273,7 +295,7 @@ export default function ProjectDashboard() {
 
             <div className="mb-5 mt-10 flex items-center justify-between">
               <h2 className="font-display text-[22px] font-semibold tracking-tight text-ink-text">
-                Chapters
+                Главы
               </h2>
               <div className="flex overflow-hidden rounded-full border border-[rgba(96,112,153,0.16)] bg-white/45 p-0.5">
                 {(["board", "outline"] as const).map((v) => (
@@ -282,7 +304,7 @@ export default function ProjectDashboard() {
                             chapterView === v
                               ? "bg-[var(--color-violet)] text-white shadow-[0_6px_16px_rgba(104,103,234,0.28)]"
                               : "text-ink-muted hover:text-ink"}`}>
-                    {v === "outline" ? "Outliner" : "Corkboard"}
+                    {v === "outline" ? "Таблица" : "Карточки"}
                   </button>
                 ))}
               </div>
@@ -296,21 +318,21 @@ export default function ProjectDashboard() {
             <div className="mt-12 mb-5 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-[22px] font-semibold tracking-tight text-ink-text">
-                  Codex
+                  Кодекс
                 </h2>
                 <p className="mt-1 text-[13px] text-ink-muted">
-                  Click an avatar to add a portrait, place photo, or item image.
+                  Нажмите на аватар, чтобы добавить портрет, фото места или изображение предмета.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link to={`/projects/${id}/research`} className="btn-ghost inline-flex items-center gap-1.5">
-                  <Icon name="image" className="h-3.5 w-3.5" /> Research
+                  <Icon name="image" className="h-3.5 w-3.5" /> Исследование
                 </Link>
                 <Link to={`/projects/${id}/chart`} className="btn-ghost inline-flex items-center gap-1.5">
-                  <Icon name="waypoints" className="h-3.5 w-3.5" /> Chart
+                  <Icon name="waypoints" className="h-3.5 w-3.5" /> Связи
                 </Link>
                 <button type="button" onClick={() => setEntryOpen(true)} className="btn-secondary">
-                  + Add Entry
+                  + Добавить запись
                 </button>
               </div>
             </div>
@@ -337,7 +359,7 @@ export default function ProjectDashboard() {
 
             {filtered.length === 0 ? (
               <div className="rounded-[24px] border border-dashed border-[rgba(74,91,133,0.18)] bg-white/45 px-8 py-10 text-center text-[13.5px] text-ink-muted">
-                No entries yet. Add characters, places, and world rules the Guardian can check against.
+                Пока нет записей. Добавьте персонажей, места и правила мира — Страж сверится с ними.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -418,21 +440,21 @@ function ContinuityHealth({
           </span>
           <div>
             <h3 className="font-display text-[17px] font-semibold tracking-tight text-ink-text">
-              Continuity health
+              Непрерывность
             </h3>
             <p className="mt-0.5 text-[13px] text-ink-muted">
               {!report
-                ? "Running deterministic checks…"
+                ? "Идут проверки…"
                 : healthy
                   ? total === 0
-                    ? "No findings story bible looks consistent."
-                    : `${info} informational note${info === 1 ? "" : "s"}; no blockers.`
-                  : `${critical} critical · ${warning} warning · ${info} info`}
+                    ? "Замечаний нет. История согласована."
+                    : `${info} ${ruPlural(info, "информационная заметка", "информационные заметки", "информационных заметок")}; блокирующих нет.`
+                  : `${critical} критично · ${warning} предупреждение · ${info} инфо`}
             </p>
           </div>
         </div>
         <button type="button" onClick={onRefresh} className="btn-ghost text-[12.5px]">
-          Refresh
+          Обновить
         </button>
       </div>
       {report && report.findings.length > 0 && (
@@ -444,7 +466,7 @@ function ContinuityHealth({
                 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-muted"
               />
               <span>
-                <span className="capitalize text-ink-muted">{f.severity}</span>
+                <span className="capitalize text-ink-muted">{f.severity === "critical" ? "критично" : f.severity === "warning" ? "предупреждение" : f.severity === "info" ? "инфо" : f.severity}</span>
                 {" · "}
                 {f.message}
               </span>
@@ -452,7 +474,7 @@ function ContinuityHealth({
           ))}
           {report.findings.length > 4 && (
             <li className="text-[12.5px] text-ink-muted">
-              +{report.findings.length - 4} more open Notes → Continuity on a chapter.
+              +{report.findings.length - 4} ещё — откройте Заметки → Непрерывность в главе.
             </li>
           )}
         </ul>
@@ -489,18 +511,18 @@ function CodexCard({
           size={isPerson ? "lg" : "md"}
           shape={isPerson || entry.entry_type === "location" ? (isPerson ? "circle" : "rounded") : "rounded"}
           label={
-            entry.entry_type === "location" ? "Place photo"
-              : entry.entry_type === "item" ? "Item image"
-                : entry.entry_type === "worldbuilding" ? "Reference"
-                  : "Portrait"
+            entry.entry_type === "location" ? "Фото места"
+              : entry.entry_type === "item" ? "Изображение предмета"
+                : entry.entry_type === "worldbuilding" ? "Иллюстрация"
+                  : "Портрет"
           }
         />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[15px] font-medium text-ink-text">{entry.name}</p>
           <p className="mt-0.5 flex items-center gap-1 text-[12px] capitalize text-ink-muted">
             <Icon name={typeIcon} className="h-3 w-3" />
-            {entry.entry_type === "worldbuilding" ? "World" : entry.entry_type}
-            {entry.role ? ` · ${entry.role}` : ""}
+            {ENTRY_TYPE_LABEL[entry.entry_type] ?? entry.entry_type}
+            {entry.role ? ` · ${ROLE_LABEL[entry.role] ?? entry.role}` : ""}
           </p>
           {entry.summary ? (
             <p className="mt-1 line-clamp-2 text-[12px] text-ink-muted">{entry.summary}</p>
@@ -509,8 +531,8 @@ function CodexCard({
         <button
           type="button"
           onClick={onEdit}
-          aria-label={`Edit ${entry.name}`}
-          title="Edit"
+          aria-label={`Изменить ${entry.name}`}
+          title="Изменить"
           className="shrink-0 self-start rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-[rgba(104,103,234,0.08)] hover:text-[var(--color-violet)]"
         >
           <Icon name="pencil" className="h-3.5 w-3.5" />
@@ -520,15 +542,15 @@ function CodexCard({
       {isPerson && (
         <div className="border-t border-[rgba(74,91,133,0.1)] pt-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-[11.5px] font-medium tracking-[-0.01em] text-ink-muted">Connections</p>
+            <p className="text-[11.5px] font-medium tracking-[-0.01em] text-ink-muted">Связи</p>
             {onAddLink && (
               <button type="button" onClick={onAddLink} className="btn-ghost px-2 py-0.5 text-[11.5px]">
-                + Link
+                + Связь
               </button>
             )}
           </div>
           {edges.length === 0 ? (
-            <p className="text-[12px] text-paper-muted">No bonds yet</p>
+            <p className="text-[12px] text-paper-muted">Связей пока нет</p>
           ) : (
             <ul className="space-y-1.5">
               {edges.slice(0, 4).map((e) => {
@@ -546,24 +568,24 @@ function CodexCard({
                     <button
                       type="button"
                       className="shrink-0 text-[11px] text-ink-muted hover:text-[#c85177]"
-                      aria-label={`Remove link to ${other}`}
+                      aria-label={`Удалить связь с ${other}`}
                       onClick={async () => {
                         try {
                           await api.deleteRelationship(projectId, e.id);
-                          toast("Link removed", "success");
+                          toast("Связь удалена", "success");
                           onUpdated();
                         } catch (err) {
                           toast(err instanceof Error ? err.message : String(err), "error");
                         }
                       }}
                     >
-                      Remove
+                      Удалить
                     </button>
                   </li>
                 );
               })}
               {edges.length > 4 && (
-                <li className="text-[11.5px] text-ink-muted">+{edges.length - 4} more on Chart</li>
+                <li className="text-[11.5px] text-ink-muted">+{edges.length - 4} ещё в Связях</li>
               )}
             </ul>
           )}
@@ -586,7 +608,7 @@ function Action({
       disabled={disabled}
       className={variant === "primary" ? "btn-primary disabled:opacity-40" : "btn-secondary disabled:opacity-40"}
     >
-      {busy ? "Running…" : children}
+      {busy ? "Выполняется…" : children}
     </button>
   );
 }
@@ -628,7 +650,7 @@ function AddCodexModal({
         const media = await api.uploadMedia(id, file, kind, name.trim());
         await api.setPortrait(id, created.id, media.id, entryType);
       }
-      toast(`Added ${name}`, "success");
+      toast(`Добавлено: ${name}`, "success");
       setName("");
       setSummary("");
       setFile(null);
@@ -643,25 +665,25 @@ function AddCodexModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Add Codex Entry">
+    <Modal open={open} onClose={onClose} title="Добавить запись в кодекс">
       <form onSubmit={submit}>
-        <Field label="Type">
+        <Field label="Тип">
           <ChoiceGroup
-            label="Type"
+            label="Тип"
             variant="cards"
             value={entryType}
             onChange={setEntryType}
             options={TYPE_OPTIONS}
           />
         </Field>
-        <Field label="Name">
+        <Field label="Имя">
           <input autoFocus className={fieldClass} value={name}
-                 onChange={(e) => setName(e.target.value)} placeholder="e.g. Mara Vale" />
+                 onChange={(e) => setName(e.target.value)} placeholder="например, Мара Вейл" />
         </Field>
         {entryType === "character" && (
-          <Field label="Role">
+          <Field label="Роль">
             <ChoiceGroup
-              label="Role"
+              label="Роль"
               variant="chips"
               value={role}
               onChange={setRole}
@@ -670,16 +692,16 @@ function AddCodexModal({
           </Field>
         )}
         {entryType !== "character" && (
-          <Field label="Summary">
+          <Field label="Описание">
             <textarea
               className={`${textareaClass} min-h-[72px]`}
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              placeholder="One or two sentences the Guardian can check against"
+              placeholder="Одно-два предложения, с которыми сверится Страж"
             />
           </Field>
         )}
-        <Field label="Image (optional)">
+        <Field label="Изображение (необязательно)">
           <div className="flex items-center gap-3">
             <label className="flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[rgba(74,91,133,0.25)] bg-white/50 text-ink-muted hover:border-[var(--color-violet)]">
               {preview ? (
@@ -695,19 +717,20 @@ function AddCodexModal({
               />
             </label>
             <p className="text-[12.5px] text-ink-muted">
-              {entryType === "character" ? "Character portrait"
-                : entryType === "location" ? "Place photo"
-                  : "Reference image"}
-              . You can add or change this later on the card.
+              {entryType === "character"
+                ? "Портрет персонажа. Можно добавить или сменить позже на карточке."
+                : entryType === "location"
+                  ? "Фото места. Можно добавить или сменить позже на карточке."
+                  : "Справочное изображение. Можно добавить или сменить позже на карточке."}
             </p>
           </div>
         </Field>
         <div className="mt-6 flex justify-end gap-3">
           <button type="button" onClick={onClose} className="btn-ghost">
-            Cancel
+            Отмена
           </button>
           <button type="submit" disabled={!name.trim() || busy} className="btn-primary disabled:opacity-40">
-            {busy ? "Adding…" : "Add"}
+            {busy ? "Добавление…" : "Добавить"}
           </button>
         </div>
       </form>

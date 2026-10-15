@@ -43,7 +43,9 @@ def test_invalid_project_ids_are_rejected(bad):
     assert tenancy.valid_project_id(bad) is False
 
 
-@pytest.mark.parametrize("good", ["book", "the-last-signal", "book_2", "a.b", "Book1"])
+@pytest.mark.parametrize("good", [
+    "book", "the-last-signal", "book_2", "a.b", "Book1", "пограничье-фантазий",
+])
 def test_valid_project_ids_are_accepted(good):
     assert tenancy.valid_project_id(good) is True
 

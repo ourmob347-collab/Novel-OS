@@ -173,12 +173,12 @@ def _describe(run: List[ChapterActivity]) -> str:
     if len(povs) == 1:
         who = next(iter(povs))
         return (
-            f"{who} carries {len(run)} chapters in a row without advancing a "
-            f"thread or changing - the protagonist has gone reactive"
+            f"{who} ведёт {len(run)} главы подряд и ничего не двигает: "
+            f"нить не задета, герой стал реактивным"
         )
     return (
-        f"{len(run)} chapters in a row with no plot advance, no new "
-        f"information and no thread touched"
+        f"{len(run)} главы подряд без сдвига сюжета, новых сведений "
+        f"и задетых нитей"
     )
 
 
@@ -201,11 +201,11 @@ def check_stalled_middle(
             severity="warning",
             category="stalled_middle",
             message=(
-                f"Chapters {run.start}-{run.end}: {run.reason}."
+                f"Главы {run.start}-{run.end}: {run.reason}."
             ),
             suggestion=(
-                "Give the POV character something they actively want in this "
-                "stretch, or fold these chapters together."
+                "Дайте герою от лица которого идёт текст то, чего он здесь сам добивается, "
+                "или сожмите эти главы."
             ),
             chapter=run.start,
             entity_id=f"ch{run.start}-{run.end}",

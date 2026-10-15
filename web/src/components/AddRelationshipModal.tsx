@@ -6,6 +6,26 @@ import EntityPicker from "./EntityPicker";
 import { useToast } from "./toastContext";
 import { BOND_OPTIONS } from "../lib/bonds";
 
+const BOND_LABELS: Record<string, string> = {
+  ally: "Союзник",
+  rival: "Соперник",
+  family: "Семья",
+  romantic: "Роман",
+  mentor: "Наставник",
+  enemy: "Враг",
+  "owes debt": "Должен",
+  secret: "Тайна",
+  unknown: "Неясно",
+  other: "Другое",
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  protagonist: "Протагонист",
+  antagonist: "Антагонист",
+  supporting: "Второстепенный",
+  minor: "Эпизодический",
+};
+
 
 /** Shared Add Relationship form (chart + Codex Connections). */
 export default function AddRelationshipModal({
@@ -63,7 +83,12 @@ export default function AddRelationshipModal({
   const entityOptions = characters.map((c) => ({
     id: c.id,
     name: c.name,
-    meta: c.role || undefined,
+    meta: c.role ? (ROLE_LABELS[c.role] ?? c.role) : undefined,
+  }));
+
+  const bondChoices = BOND_OPTIONS.map((o) => ({
+    ...o,
+    label: BOND_LABELS[o.value] ?? o.label,
   }));
 
   async function submit(e: React.FormEvent) {
@@ -76,7 +101,7 @@ export default function AddRelationshipModal({
         target_id: target,
         label: label === "other" ? (other.trim() || "unknown") : label,
       });
-      toast("Link added", "success");
+      toast("Связь добавлена", "success");
       onAdded();
       onClose();
     } catch (err) {
@@ -87,56 +112,56 @@ export default function AddRelationshipModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Add Relationship">
+    <Modal open={open} onClose={onClose} title="Добавить связь">
       <form onSubmit={submit}>
-        <Field label="From">
+        <Field label="От">
           <EntityPicker
-            label="From"
+            label="От"
             value={source}
             onChange={setSource}
             options={entityOptions}
             excludeId={target}
-            placeholder="Find who the bond starts with…"
+            placeholder="С кого начинается связь…"
           />
         </Field>
-        <Field label="To">
+        <Field label="К">
           <EntityPicker
-            label="To"
+            label="К"
             value={target}
             onChange={setTarget}
             options={entityOptions}
             excludeId={source}
-            placeholder="Find who they're linked to…"
+            placeholder="С кем связать…"
           />
         </Field>
-        <Field label="Bond">
+        <Field label="Связь">
           <ChoiceGroup
-            label="Bond"
+            label="Связь"
             variant="chips"
             size="sm"
             value={label}
             onChange={setLabel}
-            options={BOND_OPTIONS}
+            options={bondChoices}
           />
         </Field>
         {label === "other" && (
-          <Field label="Custom label">
+          <Field label="Своя подпись">
             <input
               className={fieldClass}
               value={other}
               onChange={(e) => setOther(e.target.value)}
-              placeholder="e.g. childhood friends"
+              placeholder="например, друзья детства"
             />
           </Field>
         )}
         <div className="mt-6 flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="btn-ghost">Cancel</button>
+          <button type="button" onClick={onClose} className="btn-ghost">Отмена</button>
           <button
             type="submit"
             disabled={busy || !source || !target || source === target}
             className="btn-primary disabled:opacity-40"
           >
-            {busy ? "Saving…" : "Add"}
+            {busy ? "Сохранение…" : "Добавить"}
           </button>
         </div>
       </form>

@@ -18,21 +18,21 @@ import Select from "./Select";
  * not story truth.
  */
 const EDITABLE: { role: string; label: string; hint: string }[] = [
-  { role: "chapter_title", label: "Chapter title", hint: "Heading on each chapter" },
-  { role: "body", label: "Body", hint: "Ordinary prose" },
-  { role: "block_quote", label: "Block quote", hint: "Letters and epigraphs" },
+  { role: "chapter_title", label: "Заголовок главы", hint: "Заголовок каждой главы" },
+  { role: "body", label: "Основной текст", hint: "Обычная проза" },
+  { role: "block_quote", label: "Цитата", hint: "Письма и эпиграфы" },
 ];
 
 const FONTS = [
-  { value: "serif", label: "Serif" },
-  { value: "sans", label: "Sans" },
-  { value: "mono", label: "Mono" },
+  { value: "serif", label: "С засечками" },
+  { value: "sans", label: "Без засечек" },
+  { value: "mono", label: "Моно" },
 ];
 
 const ALIGNMENTS = [
-  { value: "left", label: "Left" },
-  { value: "center", label: "Center" },
-  { value: "justify", label: "Justified" },
+  { value: "left", label: "По левому" },
+  { value: "center", label: "По центру" },
+  { value: "justify", label: "По ширине" },
 ];
 
 export default function CompilePanel({ projectId }: { projectId: string }) {
@@ -62,7 +62,7 @@ export default function CompilePanel({ projectId }: { projectId: string }) {
       // The API validates the whole sheet and rejects it entire, so the answer
       // it sends back is the truth about what is stored.
       setSheet(await api.saveStyles(projectId, sheet));
-      toast("Styles saved", "success");
+      toast("Стили сохранены", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
     } finally {
@@ -72,21 +72,21 @@ export default function CompilePanel({ projectId }: { projectId: string }) {
 
   return (
     <section
-      aria-label="Compile"
+      aria-label="Сборка"
       className="mb-6 rounded-[24px] border border-[rgba(74,91,133,0.12)] bg-white/55 px-5 py-5 backdrop-blur-md"
     >
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-[18px] font-semibold tracking-tight text-ink-text">
-            Compile
+            Сборка
           </h2>
           <p className="mt-0.5 text-[12.5px] text-ink-muted">
-            Named styles drive the export · change one, the whole book follows
+            Именованные стили задают выгрузку: измените один — и книга последует
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select
-            label="Format"
+            label="Формат"
             size="sm"
             value={format}
             onChange={(v) => setFormat(v as CompileFormat)}
@@ -102,7 +102,7 @@ export default function CompilePanel({ projectId }: { projectId: string }) {
             download
             className="btn-primary inline-flex items-center gap-1.5"
           >
-            <Icon name="download" className="h-3.5 w-3.5" /> Compile
+            <Icon name="download" className="h-3.5 w-3.5" /> Собрать
           </a>
         </div>
       </div>
@@ -122,28 +122,28 @@ export default function CompilePanel({ projectId }: { projectId: string }) {
               </div>
 
               <label className="flex items-center gap-1.5 text-[11.5px] text-ink-muted">
-                Size
+                Кегль
                 <input
                   type="number"
                   min={4}
                   max={96}
                   step={0.5}
                   value={style.size_pt}
-                  aria-label={`${label} size in points`}
+                  aria-label={`${label}, кегль`}
                   onChange={(e) => patch(role, { size_pt: Number(e.target.value) })}
                   className="w-16 rounded-lg border border-[rgba(96,112,153,0.2)] bg-white/80 px-2 py-1 text-[12px] text-ink-text"
                 />
               </label>
 
               <Select
-                label={`${label} font`}
+                label={`${label}, шрифт`}
                 size="sm"
                 value={style.font}
                 onChange={(v) => patch(role, { font: v })}
                 options={FONTS}
               />
               <Select
-                label={`${label} alignment`}
+                label={`${label}, выравнивание`}
                 size="sm"
                 value={style.align}
                 onChange={(v) => patch(role, { align: v })}
@@ -155,10 +155,10 @@ export default function CompilePanel({ projectId }: { projectId: string }) {
 
         <div className="flex flex-wrap items-center gap-3 pt-1">
           <label className="flex items-center gap-2 text-[12px] text-ink-muted">
-            Scene break
+            Разрыв сцены
             <input
               value={sheet.scene_break_marker}
-              aria-label="Scene break marker"
+              aria-label="Знак разрыва сцены"
               onChange={(e) =>
                 setSheet((s) => (s ? { ...s, scene_break_marker: e.target.value } : s))
               }
@@ -171,7 +171,7 @@ export default function CompilePanel({ projectId }: { projectId: string }) {
             onClick={() => void save()}
             className="btn-secondary disabled:opacity-40"
           >
-            {busy ? "Saving…" : "Save styles"}
+            {busy ? "Сохранение…" : "Сохранить стили"}
           </button>
         </div>
       </div>

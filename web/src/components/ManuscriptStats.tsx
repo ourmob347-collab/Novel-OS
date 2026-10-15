@@ -41,10 +41,10 @@ export default function ManuscriptStats({ projectId }: { projectId: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-[18px] font-semibold tracking-tight text-ink-text">
-            Manuscript statistics
+            Статистика рукописи
           </h2>
           <p className="mt-1 text-[12.5px] text-ink-muted">
-            Style Curator · reading time, frequent words, nearby echoes
+            Куратор стиля · время чтения, частые слова, близкие повторы
           </p>
         </div>
         <button
@@ -53,7 +53,7 @@ export default function ManuscriptStats({ projectId }: { projectId: string }) {
           disabled={loading}
           className="btn-ghost text-[12px]"
         >
-          {loading ? "Scanning…" : "Refresh"}
+          {loading ? "Сканирование…" : "Обновить"}
         </button>
       </div>
 
@@ -65,35 +65,35 @@ export default function ManuscriptStats({ projectId }: { projectId: string }) {
         <>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat
-              label="Words"
+              label="Слова"
               value={stats.word_count.toLocaleString()}
             />
             <Stat
-              label="Reading"
-              value={`~${stats.reading_minutes} min`}
+              label="Чтение"
+              value={`~${stats.reading_minutes} мин`}
             />
             <Stat
-              label="Avg sentence"
+              label="Среднее предложение"
               value={stats.avg_sentence_length ? `${stats.avg_sentence_length}` : "—"}
             />
             <Stat
-              label="With prose"
+              label="С прозой"
               value={`${stats.chapters_with_prose}/${stats.chapter_count}`}
             />
           </div>
 
           {stats.word_count === 0 ? (
             <p className="mt-5 text-[13px] text-ink-muted">
-              No draft/revised/final prose yet. Statistics appear once a chapter has text.
+              Пока нет черновика, правки или чистовика. Статистика появится, когда в главе будет текст.
             </p>
           ) : (
             <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div>
                 <h3 className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-muted">
-                  Top content words
+                  Частые слова
                 </h3>
                 {stats.top_words.length === 0 ? (
-                  <p className="text-[13px] text-ink-muted">Not enough content words yet.</p>
+                  <p className="text-[13px] text-ink-muted">Пока мало значимых слов.</p>
                 ) : (
                   <ul className="space-y-1.5">
                     {stats.top_words.slice(0, 12).map((w) => {
@@ -119,11 +119,11 @@ export default function ManuscriptStats({ projectId }: { projectId: string }) {
               <div>
                 <h3 className="mb-2.5 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-muted">
                   <Icon name="triangle-alert" className="h-3.5 w-3.5" />
-                  Echoes
+                  Эхо
                 </h3>
                 {stats.echoes.length === 0 ? (
                   <p className="text-[13px] text-ink-muted">
-                    No close repeats flagged. Echoes are content words that recur within ~40 words.
+                    Близких повторов нет. Эхо — значимые слова, которые снова встречаются примерно в пределах 40 слов.
                   </p>
                 ) : (
                   <ul className="space-y-2">
@@ -134,7 +134,7 @@ export default function ManuscriptStats({ projectId }: { projectId: string }) {
                       >
                         <span className="font-medium text-ink-text">{e.word}</span>
                         <span className="nums text-[12px] text-ink-muted">
-                          {e.count}× · {e.close_pairs} close
+                          {e.count}× · {e.close_pairs} близко
                         </span>
                       </li>
                     ))}

@@ -179,6 +179,21 @@ def test_promote_final_conflict_when_no_source(tmp_path):
     assert _client(tmp_path).post("/api/projects/p/chapters/1/final/promote").status_code == 409
 
 
+def test_promote_final_source_draft_overrides_revised(tmp_path):
+    _seed_with_chapter(tmp_path, draft="Draft text", revised="Revised text", final="Hand edit")
+    resp = _client(tmp_path).post(
+        "/api/projects/p/chapters/1/final/promote?force=true&source=draft"
+    )
+    assert resp.status_code == 200
+    assert resp.json()["final"].rstrip("\n") == "Draft text"
+
+
+def test_promote_final_rejects_unknown_source(tmp_path):
+    _seed_with_chapter(tmp_path, draft="Draft text")
+    resp = _client(tmp_path).post("/api/projects/p/chapters/1/final/promote?source=final")
+    assert resp.status_code == 400
+
+
 def test_promote_is_idempotent_without_force(tmp_path):
     _seed_with_chapter(tmp_path, revised="Revised", final="Hand-edited final")
     # already has a final promote without force must not clobber the human edit

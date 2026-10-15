@@ -9,7 +9,7 @@ export interface ProjectSummary {
 }
 
 export interface ChapterSummary {
-  number: number; title: string; status: string; word_count: number; pov: string;
+  number: number; title: string; status: string; word_count: number; char_count?: number; pov: string;
   target_word_count?: number;
 }
 export interface ChapterDetail extends ChapterSummary {
@@ -36,6 +36,7 @@ export interface StudioLlmStatus {
   error: string | null;
   presets: StudioPreset[];
   onboarding_completed: boolean;
+  autonomy_model: string;
 }
 
 export interface ContinuityFinding {
@@ -143,6 +144,17 @@ export interface FinalDoc {
 export interface PredictedConsequence {
   message: string;
   kind?: string;
+}
+
+export interface CritiqueItem {
+  quote: string;
+  note: string;
+  instruction: string;
+}
+export interface CritiqueResult {
+  criterion: "pace" | "repetition" | "causality" | string;
+  verdict: string;
+  items: CritiqueItem[];
 }
 
 export interface ConsequencePreview {
@@ -367,6 +379,7 @@ export const api = {
   updateStudioLlm: (body: {
     preset?: string; provider?: string; model?: string;
     api_key?: string; base_url?: string; onboarding_completed?: boolean;
+    autonomy_model?: string;
   }) => send<StudioLlmStatus>("/api/studio/llm", "PUT", body),
   continuity: (id: string) => get<ContinuityReport>(`/api/projects/${id}/continuity`),
   /** Edit an entry. Send only what changed - absent fields are left alone. */
@@ -434,11 +447,16 @@ export const api = {
       "POST",
       { decision },
     ),
-  promoteFinal: (id: string, n: number, force = false) =>
-    send<FinalResult>(
-      `/api/projects/${id}/chapters/${n}/final/promote${force ? "?force=true" : ""}`,
+  promoteFinal: (id: string, n: number, force = false, source?: "draft" | "revised") => {
+    const q = new URLSearchParams();
+    if (force) q.set("force", "true");
+    if (source) q.set("source", source);
+    const qs = q.toString();
+    return send<FinalResult>(
+      `/api/projects/${id}/chapters/${n}/final/promote${qs ? `?${qs}` : ""}`,
       "POST",
-    ),
+    );
+  },
   saveFinal: (id: string, n: number, text: string) =>
     send<FinalResult>(`/api/projects/${id}/chapters/${n}/final`, "PUT", { text }),
   getFinalDoc: (id: string, n: number) =>
@@ -496,6 +514,16 @@ export const api = {
       `/api/projects/${id}/chapters/${n}/continue`,
       "POST",
       { instruction },
+    ),
+  critiqueChapter: (id: string, n: number, criterion: "pace" | "repetition" | "causality") =>
+    send<CritiqueResult>(
+      `/api/projects/${id}/chapters/${n}/critique?criterion=${criterion}`,
+      "POST",
+    ),
+  critiqueAutonomous: (id: string, n: number, criterion: "pace" | "repetition") =>
+    send<CritiqueResult>(
+      `/api/projects/${id}/chapters/${n}/critique/autonomous?criterion=${criterion}`,
+      "POST",
     ),
   previewConsequence: (
     id: string,

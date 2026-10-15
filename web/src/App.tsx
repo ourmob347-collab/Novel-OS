@@ -28,7 +28,7 @@ function AnimatedRoutes() {
         exit={{ opacity: 0, y: -8, scale: 0.99 }}
         className="h-full"
       >
-        <Suspense fallback={<div className="px-10 py-12 text-ink-muted">Loading…</div>}>
+        <Suspense fallback={<div className="px-10 py-12 text-ink-muted">Загрузка…</div>}>
           <Routes location={location}>
             <Route path="/" element={<ProjectsList />} />
             <Route path="/settings" element={<Settings />} />
@@ -49,7 +49,7 @@ export default function App() {
       <MotionConfig reducedMotion="user">
         <ToastProvider>
           <ConfirmProvider>
-            <a href="#main" className="skip-link">Skip to content</a>
+            <a href="#main" className="skip-link">Перейти к содержанию</a>
             <CommandPalette />
             <ShortcutsHelp />
             <div className="flex h-full">

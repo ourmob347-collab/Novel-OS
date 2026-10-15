@@ -37,6 +37,116 @@ class BadRequest(Exception):
     pass
 
 
+_CRITIQUE_ASK = {
+    "pace": (
+        "Темп. Смена — положение героя в конце куска другое, чем в начале. "
+        "Пункт помечает просадку (длинный кусок без смены) или слишком частые смены без передышки."
+    ),
+    "repetition": (
+        "Повторы. Один и тот же жест, деталь или формулировка несколько раз. "
+        "В note укажи, где в главе это уже было."
+    ),
+    "causality": (
+        "Причинность. Действие без повода в предыдущих абзацах "
+        "или следствие, которое из них не вытекает."
+    ),
+}
+
+
+_THINK_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+_STATE_BLOCK = re.compile(
+    r"\[SCRIBE_STATE_UPDATE\].*?\[/SCRIBE_STATE_UPDATE\]",
+    re.DOTALL,
+)
+_FENCE = re.compile(r"```(?:json)?\s*(\{.*)", re.DOTALL)
+_TRAILING_COMMA = re.compile(r",\s*([}\]])")
+
+
+def parse_critique_payload(raw: str) -> tuple[str, list[dict]]:
+    """Pull {verdict, items} out of a model reply.
+
+    The scribe prompt also demands a state block, and a reasoning model may
+    wrap the object in a think tag. Take the first JSON object after those.
+    """
+    text = _STATE_BLOCK.sub("", _THINK_BLOCK.sub("", raw or "")).strip()
+    fenced = _FENCE.search(text)
+    if fenced:
+        text = fenced.group(1)
+        close = text.rfind("```")
+        if close >= 0:
+            text = text[:close]
+    start = text.find("{")
+    if start < 0:
+        raise ValueError("Модель не вернула JSON.")
+    data = _load_json_object(text[start:])
+    verdict = str(data.get("verdict") or "").strip()
+    items = data.get("items") or []
+    if not isinstance(items, list):
+        raise ValueError("Модель не вернула список пунктов.")
+    return verdict, [item for item in items if isinstance(item, dict)]
+
+
+def _load_json_object(blob: str) -> dict:
+    decoder = json.JSONDecoder()
+    for candidate in (blob.lstrip(), _TRAILING_COMMA.sub(r"\1", blob.lstrip())):
+        try:
+            data, _end = decoder.raw_decode(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, dict):
+            return data
+    raise ValueError("Модель не вернула JSON.")
+
+
+def quote_in_prose(quote: str, prose: str) -> bool:
+    """True when the quote is a real stretch of the chapter, ignoring line breaks."""
+    needle = re.sub(r"\s+", " ", quote or "").strip()
+    if len(needle) < 12:
+        return False
+    return locate_span(prose, quote) is not None
+
+
+def locate_span(prose: str, quote: str) -> tuple[int, int] | None:
+    """Start and end of the quote in the chapter. Whitespace may differ."""
+    exact = (quote or "").strip()
+    if exact and exact in prose:
+        at = prose.find(exact)
+        return at, at + len(exact)
+    needle = re.sub(r"\s+", " ", quote or "").strip()
+    if len(needle) < 12:
+        return None
+    squashed: list[str] = []
+    index_map: list[int] = []
+    gap = False
+    for i, ch in enumerate(prose):
+        if ch.isspace():
+            gap = bool(squashed)
+            continue
+        if gap:
+            squashed.append(" ")
+            index_map.append(i)
+            gap = False
+        squashed.append(ch)
+        index_map.append(i)
+    text = "".join(squashed)
+    at = text.find(needle)
+    if at < 0:
+        return None
+    start = index_map[at]
+    end = index_map[at + len(needle) - 1] + 1
+    return start, end
+
+
+def autonomy_client():
+    """Studio provider and key, with the cheap autonomy model id."""
+    from core.llm_client import LLMClient  # noqa: E402
+    from core.studio_settings import apply_to_environ, autonomy_model, load_settings  # noqa: E402
+
+    apply_to_environ(load_settings())
+    provider = os.environ.get("NOVEL_OS_LLM_PROVIDER") or None
+    return LLMClient(provider=provider, model=autonomy_model())
+
+
 def build_orchestrator(project_dir: str):
     """Construct a NovelOrchestrator for a project folder. Patchable in tests."""
     from orchestrator import NovelOrchestrator  # noqa: E402 (lazy: heavy import)
@@ -255,19 +365,41 @@ class ProjectService:
         s.save_state()
         return self.project_detail(project_id)
 
+    def _chapter_prose(self, project_id: str, number: int) -> str:
+        """Current chapter text: non-empty final, otherwise the revised or draft file."""
+        nnn = f"{number:03d}"
+        manuscript = self._project_dir(project_id) / "outputs" / "manuscript"
+        for name in (
+            f"chapter_{nnn}_final.md",
+            f"chapter_{nnn}_revised.md",
+            f"chapter_{nnn}_draft.md",
+        ):
+            path = manuscript / name
+            if not path.exists():
+                continue
+            text = path.read_text(encoding="utf-8").strip()
+            if text:
+                return text
+        return ""
+
     def list_chapters(self, project_id: str) -> list[ChapterSummary]:
         s = self._load(project_id)
-        return [
-            ChapterSummary(
-                number=c.number,
-                title=c.title or "",
-                status=c.status,
-                word_count=c.word_count,
-                pov=c.pov_character or "",
-                target_word_count=int(c.target_word_count or 2500),
+        rows: list[ChapterSummary] = []
+        for c in sorted(s.chapters.values(), key=lambda c: c.number):
+            prose = self._chapter_prose(project_id, c.number)
+            words = c.word_count or (len(prose.split()) if prose else 0)
+            rows.append(
+                ChapterSummary(
+                    number=c.number,
+                    title=c.title or "",
+                    status=c.status,
+                    word_count=words,
+                    char_count=len(prose),
+                    pov=c.pov_character or "",
+                    target_word_count=int(c.target_word_count or 2500),
+                )
             )
-            for c in sorted(s.chapters.values(), key=lambda c: c.number)
-        ]
+        return rows
 
     def chapter_detail(self, project_id: str, number: int) -> ChapterDetail:
         s = self._load(project_id)
@@ -1048,11 +1180,24 @@ POV: {pov or "[unspecified]"}
         from prose_sanitize import repair_spaced_hyphen_corruption, sanitize_manuscript  # noqa: E402
 
         self.ensure_chapter(project_id, number)
+        db.collapse_stage_duplicates(project_id, number, "final")
+        text = self.get_final_text(project_id, number) or ""
+        art = db.get_artifact(project_id, number, "final")
+        art_text = (art.text if art else "") or ""
+        # An empty editor save can zero the file while an older row still holds
+        # the manuscript. Put that text back on disk before the editor opens.
+        if not text.strip() and art_text.strip():
+            path = self._stage_paths(project_id, number)["final"]
+            restored = art_text if art_text.endswith("\n") else art_text + "\n"
+            _atomic_write(path, restored)
+            text = restored
         stored = db.get_artifact_doc(project_id, number, "final")
         if stored:
             try:
                 doc = json.loads(stored)
                 md = richtext.to_markdown(doc)
+                if not (md or "").strip() and text.strip():
+                    return richtext.from_markdown(text)
                 if repair_spaced_hyphen_corruption(md) != md:
                     clean, _ = sanitize_manuscript(md)
                     clean_doc = richtext.from_markdown(clean) if clean else richtext.empty_doc()
@@ -1061,7 +1206,7 @@ POV: {pov or "[unspecified]"}
                 return doc
             except json.JSONDecodeError:
                 pass  # corrupt JSON: fall back to the markdown, which is intact
-        text = self.get_final_text(project_id, number)
+        text = text or self.get_final_text(project_id, number)
         if text and repair_spaced_hyphen_corruption(text) != text:
             clean, _ = sanitize_manuscript(text)
             clean_doc = richtext.from_markdown(clean) if clean else richtext.empty_doc()
@@ -1081,22 +1226,42 @@ POV: {pov or "[unspecified]"}
         clean_doc = richtext.map_text(doc, strip_em_dashes)
         md = richtext.to_markdown(clean_doc)
         clean, meta = sanitize_manuscript(md)
+        # Opening the chapter mounts an empty editor before the manuscript
+        # arrives. That editor must not overwrite a final that already has text.
+        if not (clean or "").strip():
+            current = self.get_final_text(project_id, number) or ""
+            if not current.strip():
+                kept = db.get_artifact(project_id, number, "final")
+                current = (kept.text if kept else "") or ""
+            if current.strip():
+                return len(current.split())
         s = self._load(project_id)
         apply_header_to_chapter(s.chapters.get(number), meta)
         s.save_state()
         return self._commit_final(project_id, number, clean, doc=clean_doc)
 
-    def promote_final(self, project_id: str, number: int, force: bool = False) -> str:
+    def promote_final(
+        self, project_id: str, number: int, force: bool = False, source: str | None = None,
+    ) -> str:
         """Seed Final from revised||draft. Idempotent: never clobbers a human edit unless forced.
 
         P3.3: prefers a human-reviewed source. Use force=True to promote an
         unreviewed AI stage (author override).
+
+        ``source`` pins the stage ("draft" or "revised"). Without it, revised
+        wins over draft.
         """
         p = self._stage_paths(project_id, number)
+        pinned = (source or "").strip().lower()
+        if pinned and pinned not in ("draft", "revised"):
+            raise BadRequest("source must be draft or revised.")
         if p["final"].exists() and not force:
             return p["final"].read_text(encoding="utf-8")
 
-        source_stage = "revised" if p["revised"].exists() else ("draft" if p["draft"].exists() else None)
+        if pinned:
+            source_stage = pinned if p[pinned].exists() else None
+        else:
+            source_stage = "revised" if p["revised"].exists() else ("draft" if p["draft"].exists() else None)
         if source_stage is None:
             raise NoSourceArtifact(number)
 
@@ -1278,6 +1443,225 @@ Chapter {number} POV: {pov or "[unspecified]"} · Location: {location or "[unspe
 
     # In-memory consequence previews (single-user). Keyed by preview_id.
     _consequence_previews: dict[str, dict] = {}
+
+    def critique_chapter(
+        self,
+        project_id: str,
+        number: int,
+        criterion: str,
+        *,
+        llm=None,
+        prose: str | None = None,
+    ) -> dict:
+        """One prose check. Empty items and a calm verdict mean the chapter is fine."""
+        key = (criterion or "").strip().lower()
+        if key not in _CRITIQUE_ASK:
+            raise BadRequest("criterion must be pace, repetition, or causality.")
+        self.ensure_chapter(project_id, number)
+        if prose is None:
+            prose = self._chapter_prose(project_id, number)
+        if not prose:
+            raise BadRequest("В главе ещё нет текста.")
+        body = prose if len(prose) <= 28000 else prose[:28000]
+        prompt = (
+            "Ты читаешь одну главу и отвечаешь только по одному критерию.\n\n"
+            f"Критерий: {_CRITIQUE_ASK[key]}\n\n"
+            "Если глава в порядке, верни пустой список и спокойный вердикт.\n"
+            "Каждый пункт: quote — дословный кусок из текста, note — что не так, "
+            "instruction — что сказать писцу, чтобы это поправить.\n"
+            "Не больше шести пунктов. Не выдумывай цитат: quote должен стоять в тексте подряд.\n\n"
+            'Ответ — только JSON:\n'
+            '{"verdict": "одна фраза", "items": [{"quote": "...", "note": "...", "instruction": "..."}]}\n\n'
+            f"Глава:\n{body}\n"
+        )
+        if llm is None:
+            orch = build_orchestrator(str(self._project_dir(project_id)))
+            llm = orch._get_llm()
+        # The scribe prompt requires a prose chapter plus [SCRIBE_STATE_UPDATE].
+        # That contract fights a JSON answer, so this call uses the same model
+        # with a short system line and no agent prompt.
+        system = (
+            "Ты отвечаешь только одним JSON-объектом. "
+            "Без прозы, без markdown и без блока [SCRIBE_STATE_UPDATE]."
+        )
+        try:
+            raw = llm.complete(system, prompt)
+        except Exception as e:  # noqa: BLE001
+            raise BadRequest(f"LLM critique failed: {e}") from e
+        try:
+            verdict, items = parse_critique_payload(raw)
+        except ValueError:
+            try:
+                raw = llm.complete(
+                    system,
+                    prompt + "\n\nПредыдущий ответ не был JSON. Верни только объект "
+                    '{"verdict","items"} без пояснений.',
+                )
+            except Exception as e:  # noqa: BLE001
+                raise BadRequest(f"LLM critique failed: {e}") from e
+            try:
+                verdict, items = parse_critique_payload(raw)
+            except ValueError as e:
+                raise BadRequest(str(e)) from e
+        kept: list[dict] = []
+        for item in items[:6]:
+            quote = str(item.get("quote") or "").strip()
+            note = str(item.get("note") or "").strip()
+            instruction = str(item.get("instruction") or "").strip()
+            if not quote or not note or not instruction:
+                continue
+            if not quote_in_prose(quote, prose):
+                continue
+            kept.append({"quote": quote, "note": note, "instruction": instruction})
+        if not verdict:
+            verdict = "Замечаний нет." if not kept else "Есть замечания."
+        return {"criterion": key, "verdict": verdict, "items": kept}
+
+    def _final_text(self, project_id: str, number: int) -> str:
+        path = self._stage_paths(project_id, number)["final"]
+        if not path.exists():
+            return ""
+        return path.read_text(encoding="utf-8").strip()
+
+    def autonomous_critique(self, project_id: str, number: int, criterion: str) -> dict:
+        """Critique, apply each note to the clean copy, then critique once more.
+
+        Pace and repetition only. Both calls use the autonomy model.
+        The second list is returned as-is.
+        """
+        key = (criterion or "").strip().lower()
+        if key not in ("pace", "repetition"):
+            raise BadRequest("Автономная правка есть только у темпа и повторов.")
+        self.ensure_chapter(project_id, number)
+        prose = self._final_text(project_id, number)
+        if not prose:
+            raise BadRequest("В чистовике ещё нет текста.")
+        llm = autonomy_client()
+        first = self.critique_chapter(project_id, number, key, llm=llm, prose=prose)
+        current = prose
+        for item in first["items"]:
+            current = self._apply_autonomous_rewrite(
+                project_id, number, current, item, llm,
+            )
+        if not first["items"]:
+            return first
+        return self.critique_chapter(project_id, number, key, llm=llm, prose=current)
+
+    def _apply_autonomous_rewrite(
+        self, project_id: str, number: int, prose: str, item: dict, llm,
+    ) -> str:
+        span = locate_span(prose, str(item.get("quote") or ""))
+        if span is None:
+            return prose
+        start, end = span
+        selection = prose[start:end]
+        rewritten, delta = self._cheap_rewrite(
+            project_id,
+            number,
+            selection,
+            str(item.get("instruction") or ""),
+            prose[max(0, start - 800):start],
+            prose[end:end + 800],
+            llm,
+        )
+        if not rewritten or rewritten == selection:
+            return prose
+        updated = prose[:start] + rewritten + prose[end:]
+        from prose_sanitize import sanitize_manuscript, strip_em_dashes  # noqa: E402
+        from state_parser import apply_to_state  # noqa: E402
+
+        clean = strip_em_dashes(sanitize_manuscript(updated)[0]).strip()
+        if not clean:
+            return prose
+        s = self._load(project_id)
+        if delta:
+            apply_to_state(s, number, delta, source="consequence_accept")
+        doc = richtext.from_markdown(clean)
+        self._commit_final(project_id, number, clean, doc=doc)
+        s.save_state()
+        return clean
+
+    def _cheap_rewrite(
+        self,
+        project_id: str,
+        number: int,
+        selection: str,
+        instruction: str,
+        before_context: str,
+        after_context: str,
+        llm,
+    ) -> tuple[str, dict]:
+        from consequence import extract_rewritten  # noqa: E402
+        from prose_sanitize import sanitize_manuscript, strip_em_dashes  # noqa: E402
+        from state_parser import parse_scribe  # noqa: E402
+
+        s = self._load(project_id)
+        title = s.metadata.get("title", project_id)
+        genre = s.metadata.get("genre", "")
+        chapter = s.chapters.get(number)
+        pov = (chapter.pov_character if chapter else "") or ""
+        location = (chapter.location if chapter else "") or ""
+        prompt = f"""# REWRITE SPAN consequence preview
+
+You are the Scribe for "{title}" ({genre}).
+Chapter {number} POV: {pov or "[unspecified]"} · Location: {location or "[unspecified]"}
+
+## Context before selection
+```
+{before_context or "(start)"}
+```
+
+## Selection to rewrite
+```
+{selection}
+```
+
+## Context after selection
+```
+{after_context or "(end)"}
+```
+
+## Author instruction
+{instruction}
+
+## Output format (strict)
+1. Put the rewritten selection only inside:
+[REWRITTEN]
+…rewritten prose matching voice/tense/POV…
+[/REWRITTEN]
+
+2. Then a state block for world changes implied by the rewrite (use None if none):
+[SCRIBE_STATE_UPDATE]
+Characters_Present: …
+Key_Events: …
+Emotional_Shifts: …
+New_Information_Revealed: …
+Foreshadowing_Planted: …
+[/SCRIBE_STATE_UPDATE]
+
+3. Then AI guesses that continuity checks cannot prove (label them clearly):
+[PREDICTED_CONSEQUENCES]
+- …
+[/PREDICTED_CONSEQUENCES]
+
+## Rules
+- Rewrite only the selection; do not continue past it.
+- **Never use the em dash character.** Use commas, periods, colons, or spaced hyphens (` - `).
+- No HTML chapter headers. No commentary outside the tagged blocks.
+"""
+        try:
+            raw = llm.complete(
+                "Следуй формату с метками [REWRITTEN] и [SCRIBE_STATE_UPDATE]. "
+                "Перепиши только выделенный кусок.",
+                prompt,
+            )
+        except Exception as e:  # noqa: BLE001
+            raise BadRequest(f"LLM rewrite failed: {e}") from e
+        rewritten = strip_em_dashes(sanitize_manuscript(extract_rewritten(raw))[0]).strip()
+        if rewritten.startswith("```"):
+            rewritten = re.sub(r"^```\w*\n?", "", rewritten)
+            rewritten = re.sub(r"\n?```$", "", rewritten).strip()
+        return rewritten, parse_scribe(raw) or {}
 
     def preview_consequence(
         self,

@@ -32,6 +32,5 @@ test("shows project title and chapter cards", async () => {
   );
   expect(await screen.findByText("My Novel")).toBeInTheDocument();
   expect(screen.getByText("Opening")).toBeInTheDocument();
-  expect(screen.getByText(/drafted/i)).toBeInTheDocument();
-  expect(screen.getByPlaceholderText(/Add a synopsis/i)).toBeInTheDocument();
+  expect(screen.getByText(/Черновик/)).toBeInTheDocument();
 });

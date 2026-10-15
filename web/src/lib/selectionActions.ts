@@ -39,12 +39,12 @@ export type SelectionAction = {
  * the proposal as tracked changes, what it breaks, what it might mean.
  */
 export const SELECTION_ACTIONS: readonly SelectionAction[] = [
-  { id: "rewrite", label: "Rewrite", icon: "sparkles", primary: true, needsSelection: true },
-  { id: "expand", label: "Expand", icon: "pen-line", primary: true, needsSelection: true },
-  { id: "comment", label: "Comment", icon: "message-square", primary: true, needsSelection: true },
-  { id: "link", label: "Link to Codex", icon: "users", needsSelection: true },
-  { id: "create", label: "New Codex entry", icon: "plus", needsSelection: true },
-  { id: "ask", label: "Ask Scribe…", icon: "bot", needsSelection: false },
+  { id: "rewrite", label: "Переписать", icon: "sparkles", primary: true, needsSelection: true },
+  { id: "expand", label: "Развернуть", icon: "pen-line", primary: true, needsSelection: true },
+  { id: "comment", label: "Комментарий", icon: "message-square", primary: true, needsSelection: true },
+  { id: "link", label: "Связать с Кодексом", icon: "users", needsSelection: true },
+  { id: "create", label: "Новая запись Кодекса", icon: "plus", needsSelection: true },
+  { id: "ask", label: "Спросить Писца…", icon: "bot", needsSelection: false },
 ];
 
 /** The subset shown in the floating bar - the rest stay one right-click away. */

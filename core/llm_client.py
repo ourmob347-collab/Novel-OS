@@ -346,15 +346,34 @@ class LLMClient:
         return "".join(getattr(b, "text", "") or "" for b in resp.content)
 
     def _complete_openai_shape(self, system: str, user: str) -> str:
-        resp = self._backend.chat.completions.create(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-        )
-        return resp.choices[0].message.content or ""
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
+        parts: list[str] = []
+        # A chapter is longer than one response window. If the model stops
+        # because it hit max_tokens, ask it to continue from the cut.
+        for _ in range(4):
+            resp = self._backend.chat.completions.create(
+                model=self.model,
+                max_tokens=self.max_tokens,
+                messages=messages,
+            )
+            choice = resp.choices[0]
+            chunk = choice.message.content or ""
+            parts.append(chunk)
+            if getattr(choice, "finish_reason", None) != "length" or not chunk:
+                break
+            print("   …ответ обрезан лимитом, дописываю")
+            messages.append({"role": "assistant", "content": chunk})
+            messages.append({
+                "role": "user",
+                "content": (
+                    "Continue exactly where the text stopped. "
+                    "Do not repeat what is already written. Do not add a heading."
+                ),
+            })
+        return "".join(parts)
 
     def _complete_gemini(self, system: str, user: str) -> str:
         from google.genai import types  # type: ignore

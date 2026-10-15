@@ -5,11 +5,44 @@ import Icon from "./Icon";
 import Select from "./Select";
 
 const TYPES: { value: CodexEntryType; label: string }[] = [
-  { value: "character", label: "Character" },
-  { value: "location", label: "Location" },
-  { value: "worldbuilding", label: "World" },
-  { value: "item", label: "Item" },
+  { value: "character", label: "Персонаж" },
+  { value: "location", label: "Место" },
+  { value: "worldbuilding", label: "Мир" },
+  { value: "item", label: "Предмет" },
 ];
+
+function ruCardinal(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
+function proposalSummary(n: number): string {
+  const word = ruCardinal(n, "имя", "имени", "имён");
+  return `${n} ${word} ещё нет в Кодексе. Ничего не сохранится, пока вы не добавите.`;
+}
+
+function localizeEvidence(evidence: string): string {
+  return evidence
+    .replace(/(\d+) mentions/g, (_, raw: string) => {
+      const n = Number(raw);
+      return `${n} ${ruCardinal(n, "упоминание", "упоминания", "упоминаний")}`;
+    })
+    .replace(/\bspeaks\b/g, "говорит")
+    .replace(/\bhas a title\b/g, "есть титул")
+    .replace(/\bused as a place\b/g, "как место")
+    .replace(/\bpossessive form\b/g, "притяжательная форма")
+    .replace(/\brecurring proper noun\b/g, "повторяется")
+    .replace(/\bnamed place\b/g, "названное место")
+    .replace(/\bfull name\b/g, "полное имя")
+    .replace(/\bin (\d+) chapters\b/g, (_, raw: string) => {
+      const n = Number(raw);
+      const word = n % 10 === 1 && n % 100 !== 11 ? "главе" : "главах";
+      return `в ${n} ${word}`;
+    });
+}
 
 /**
  * Review queue for Codex entries found in the manuscript (PLAN.md P2.2).
@@ -71,18 +104,17 @@ export default function CodexProposals({
 
   return (
     <section
-      aria-label="Codex proposals"
+      aria-label="Предложения Кодекса"
       className="mb-6 rounded-[24px] border border-[rgba(104,103,234,0.22)] bg-[rgba(104,103,234,0.05)] px-5 py-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-1.5 font-display text-[16px] font-semibold tracking-tight text-ink-text">
             <Icon name="sparkles" className="h-4 w-4 text-[var(--color-violet)]" />
-            Found in your manuscript
+            Найдено в рукописи
           </h2>
           <p className="mt-0.5 text-[12.5px] text-ink-muted">
-            {visible.length} {visible.length === 1 ? "name" : "names"} not in your
-            Codex yet. Nothing is saved until you add it.
+            {proposalSummary(visible.length)}
           </p>
         </div>
         <div className="flex gap-2">
@@ -91,7 +123,7 @@ export default function CodexProposals({
             className="btn-ghost px-2.5 py-1 text-[12px]"
             onClick={() => setDismissed(new Set(proposals.map((p) => p.name)))}
           >
-            Dismiss all
+            Скрыть всё
           </button>
           <button
             type="button"
@@ -99,7 +131,7 @@ export default function CodexProposals({
             className="btn-ghost px-2.5 py-1 text-[12px]"
             onClick={() => setOpen((o) => !o)}
           >
-            {open ? "Hide" : "Show"}
+            {open ? "Свернуть" : "Показать"}
           </button>
         </div>
       </div>
@@ -116,13 +148,13 @@ export default function CodexProposals({
                   {p.name}
                 </p>
                 <p className="truncate text-[11.5px] text-ink-muted" title={p.excerpt}>
-                  {p.evidence}
-                  {p.excerpt ? ` · “${p.excerpt}”` : ""}
+                  {localizeEvidence(p.evidence)}
+                  {p.excerpt ? ` · «${p.excerpt}»` : ""}
                 </p>
               </div>
 
               <Select
-                label={`Type for ${p.name}`}
+                label={`Тип для ${p.name}`}
                 size="sm"
                 value={types[p.name] ?? p.entry_type}
                 onChange={(v) =>
@@ -134,20 +166,20 @@ export default function CodexProposals({
               <span className="flex shrink-0 gap-1">
                 <button
                   type="button"
-                  aria-label={`Dismiss ${p.name}`}
+                  aria-label={`Скрыть ${p.name}`}
                   className="btn-ghost px-2 py-0.5 text-[12px]"
                   onClick={() => setDismissed((d) => new Set(d).add(p.name))}
                 >
-                  Dismiss
+                  Скрыть
                 </button>
                 <button
                   type="button"
-                  aria-label={`Add ${p.name} to Codex`}
+                  aria-label={`Добавить ${p.name} в Кодекс`}
                   disabled={busy === p.name}
                   className="btn-secondary px-2 py-0.5 text-[12px] disabled:opacity-40"
                   onClick={() => void accept(p)}
                 >
-                  {busy === p.name ? "Adding…" : "Add"}
+                  {busy === p.name ? "Добавление…" : "Добавить"}
                 </button>
               </span>
             </li>

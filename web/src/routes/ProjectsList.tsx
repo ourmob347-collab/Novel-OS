@@ -45,7 +45,7 @@ export default function ProjectsList() {
     try {
       const p = await api.createSampleProject();
       await api.updateStudioLlm({ onboarding_completed: true }).then(setLlm).catch(() => undefined);
-      toast("Sample manuscript ready", "success");
+      toast("Образец рукописи готов", "success");
       navigate(`/projects/${p.id}`);
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
@@ -67,16 +67,16 @@ export default function ProjectsList() {
           <div className="glass-panel px-6 py-8 sm:px-10 sm:py-10">
             <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="eyebrow">Your workspace</p>
+                <p className="eyebrow">Ваше рабочее место</p>
                 <h1 className="font-display text-[32px] font-semibold leading-none tracking-[-0.035em] text-ink-text sm:text-[36px]">
-                  Manuscripts
+                  Рукописи
                 </h1>
                 <p className="mt-3 max-w-lg text-[14px] leading-relaxed text-ink-muted">
-                  Projects, chapters, and the agent pipeline one studio.
+                  Проекты, главы и конвейер агентов — в одной студии.
                 </p>
               </div>
               <button type="button" onClick={() => setOpen(true)} className="btn-primary shrink-0">
-                New manuscript
+                Новая рукопись
               </button>
             </header>
 
@@ -85,22 +85,22 @@ export default function ProjectsList() {
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="max-w-xl">
                     <p className="text-[15px] font-semibold text-ink-text">
-                      {llm.configured ? "Welcome to Novel OS" : "Connect a writing model first"}
+                      {llm.configured ? "Добро пожаловать в Novel OS" : "Сначала подключите модель"}
                     </p>
                     <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
                       {llm.configured
-                        ? "Structure first, prose second, continuity always. Create a manuscript, plan an outline, then draft chapter by chapter."
-                        : "Agents need an LLM. Open Settings to pick Quality, Fast, Local (Ollama), or Mature-capable (BYOK)."}
+                        ? "Сначала структура. Потом проза. Непрерывность — всегда. Создайте рукопись, наметьте план и пишите главу за главой."
+                        : "Агентам нужна языковая модель. Откройте «Настройки» и выберите «Качество», «Быстро», «Локально» (Ollama) или «Без цензуры» (свой ключ)."}
                     </p>
                     <ol className="mt-3 list-decimal space-y-1 pl-4 text-[12.5px] text-ink-muted">
-                      <li>Configure your model in Settings</li>
-                      <li>Create a manuscript</li>
-                      <li>Plan outline → plan chapter → generate draft → Final</li>
+                      <li>Настройте модель в «Настройках»</li>
+                      <li>Создайте рукопись</li>
+                      <li>План → план главы → черновик → чистовик</li>
                     </ol>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Link to="/settings" className="btn-primary inline-flex items-center gap-2">
-                      <Icon name="sparkles" className="h-3.5 w-3.5" /> Settings
+                      <Icon name="sparkles" className="h-3.5 w-3.5" /> Настройки
                     </Link>
                     <button
                       type="button"
@@ -108,14 +108,14 @@ export default function ProjectsList() {
                       disabled={sampleBusy}
                       className="btn-secondary disabled:opacity-40"
                     >
-                      {sampleBusy ? "Opening…" : "Open sample"}
+                      {sampleBusy ? "Открываем…" : "Открыть образец"}
                     </button>
                     <button type="button" onClick={() => setTourOpen(true)} className="btn-ghost">
-                      Tour
+                      Экскурсия
                     </button>
                     {llm.onboarding_completed === false && (
                       <button type="button" onClick={dismissOnboarding} className="btn-ghost">
-                        Dismiss
+                        Скрыть
                       </button>
                     )}
                   </div>
@@ -125,7 +125,7 @@ export default function ProjectsList() {
 
             {error && (
               <div className="mb-4 rounded-2xl border border-[rgba(74,91,133,0.16)] bg-white/80 px-4 py-3 text-[13px] text-ink-text">
-                Failed to load projects: {error}
+                Не удалось загрузить проекты: {error}
               </div>
             )}
 
@@ -133,10 +133,10 @@ export default function ProjectsList() {
 
             {!error && projects && projects.length === 0 && (
               <div className="rounded-[24px] border border-dashed border-[rgba(74,91,133,0.18)] bg-white/50 px-8 py-14 text-center">
-                <p className="font-display text-[18px] tracking-[-0.02em] text-ink-text">No manuscripts yet</p>
-                <p className="mt-2 text-[13px] text-ink-muted">Start with a title and a genre.</p>
+                <p className="font-display text-[18px] tracking-[-0.02em] text-ink-text">Рукописей пока нет</p>
+                <p className="mt-2 text-[13px] text-ink-muted">Начните с названия и жанра.</p>
                 <button type="button" onClick={() => setOpen(true)} className="btn-primary mt-5">
-                  New manuscript
+                  Новая рукопись
                 </button>
                 <button
                   type="button"
@@ -144,7 +144,7 @@ export default function ProjectsList() {
                   disabled={sampleBusy}
                   className="btn-secondary mt-3 disabled:opacity-40"
                 >
-                  {sampleBusy ? "Opening…" : "Try the sample tour"}
+                  {sampleBusy ? "Открываем…" : "Попробовать образец"}
                 </button>
               </div>
             )}
@@ -184,20 +184,20 @@ export default function ProjectsList() {
 
 const TOUR_STEPS = [
   {
-    title: "Connect a model",
-    body: "Open Settings and pick Quality, Fast, Local (Ollama), or Mature-capable (BYOK). Agents need a live LLM before drafting feels real.",
+    title: "Подключите модель",
+    body: "Откройте «Настройки» и выберите «Качество», «Быстро», «Локально» (Ollama) или «Без цензуры» (свой ключ). Пока модель не подключена, черновик не оживёт.",
   },
   {
-    title: "Create or open a manuscript",
-    body: "Start blank, or open the Glass Harbor sample it ships with Codex entries, an outline, and a short draft.",
+    title: "Создайте или откройте рукопись",
+    body: "Начните с чистого листа или откройте образец Glass Harbor: в нём уже есть записи Кодекса, план и короткий черновик.",
   },
   {
-    title: "Run the pipeline",
-    body: "Plan outline → plan chapter → draft → edit → validate. Each stage leaves an artifact you can open and revise.",
+    title: "Запустите конвейер",
+    body: "План → план главы → черновик → правка → проверка. Каждый этап оставляет артефакт, который можно открыть и поправить.",
   },
   {
-    title: "Trust continuity",
-    body: "Dashboard health and Notes → Continuity show free deterministic checks. The Guardian also reads your Codex as ground truth.",
+    title: "Доверьтесь непрерывности",
+    body: "Состояние на панели и раздел «Заметки → Непрерывность» показывают бесплатные проверки по правилам. Страж тоже читает Кодекс как источник истины.",
   },
 ];
 
@@ -223,9 +223,9 @@ function TourModal({
   const current = TOUR_STEPS[step];
 
   return (
-    <Modal open={open} onClose={onClose} title="Studio tour">
+    <Modal open={open} onClose={onClose} title="Экскурсия по студии">
       <p className="text-[12px] font-medium text-ink-muted">
-        Step {step + 1} of {TOUR_STEPS.length}
+        Шаг {step + 1} из {TOUR_STEPS.length}
       </p>
       <h3 className="mt-2 font-display text-[20px] font-semibold tracking-tight text-ink-text">
         {current.title}
@@ -233,17 +233,17 @@ function TourModal({
       <p className="mt-2 text-[14px] leading-relaxed text-ink-muted">{current.body}</p>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={onDismiss} className="btn-ghost text-[12.5px]">
-          Skip
+          Пропустить
         </button>
         <div className="flex flex-wrap gap-2">
           {step > 0 && (
             <button type="button" onClick={() => setStep((s) => s - 1)} className="btn-ghost">
-              Back
+              Назад
             </button>
           )}
           {step < TOUR_STEPS.length - 1 ? (
             <button type="button" onClick={() => setStep((s) => s + 1)} className="btn-primary">
-              Next
+              Далее
             </button>
           ) : (
             <>
@@ -253,10 +253,10 @@ function TourModal({
                 disabled={sampleBusy}
                 className="btn-secondary disabled:opacity-40"
               >
-                {sampleBusy ? "Opening…" : "Open sample"}
+                {sampleBusy ? "Открываем…" : "Открыть образец"}
               </button>
               <button type="button" onClick={onDismiss} className="btn-primary">
-                Done
+                Готово
               </button>
             </>
           )}
@@ -289,7 +289,7 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
         genre: merged.join(" · "),
         premise: premise.trim(),
       });
-      toast("Manuscript created", "success");
+      toast("Рукопись создана", "success");
       navigate(`/projects/${p.id}`);
     } catch (err) {
       toast(err instanceof Error ? err.message : String(err), "error");
@@ -298,29 +298,29 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="New Manuscript">
+    <Modal open={open} onClose={onClose} title="Новая рукопись">
       <form onSubmit={create}>
-        <Field label="Title">
+        <Field label="Название">
           <input
             autoFocus
             className={fieldClass}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. The Last Signal"
+            placeholder="например, «Последний сигнал»"
           />
         </Field>
-        <Field label="Author">
+        <Field label="Автор">
           <input
             className={fieldClass}
             value={author}
             onChange={(e) => setAuthor(e.target.value)}
-            placeholder="Your name"
+            placeholder="Ваше имя"
             autoComplete="name"
           />
         </Field>
         <div className="mb-4">
           <span className="mb-1.5 block text-[12px] font-medium tracking-[-0.01em] text-ink-muted">
-            Genres
+            Жанры
           </span>
           <GenreChips
             selected={genres}
@@ -329,31 +329,31 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
             onOtherChange={setOtherGenre}
           />
           <p className="mt-1.5 text-[11.5px] text-ink-muted">
-            Pick one or more. Hybrids welcome.
+            Можно выбрать несколько. Гибриды приветствуются.
           </p>
         </div>
         <div className="mb-4">
           <label htmlFor="manuscript-premise" className="mb-1.5 block text-[12px] font-medium tracking-[-0.01em] text-ink-muted">
-            Premise
+            Замысел
           </label>
           <textarea
             id="manuscript-premise"
             className={textareaClass}
             value={premise}
             onChange={(e) => setPremise(e.target.value)}
-            placeholder="A fogbound port, a compass that won’t point north…"
+            placeholder="Порт в тумане, компас, который не смотрит на север…"
             rows={2}
           />
           <p className="mt-1.5 text-[11.5px] text-ink-muted">
-            Optional. Two to four sentences the Architect can plan from.
+            Необязательно. Два–четыре предложения, по которым Архитектор составит план.
           </p>
         </div>
         <div className="sticky bottom-0 -mx-1 mt-4 flex justify-end gap-3 border-t border-[rgba(74,91,133,0.08)] bg-gradient-to-t from-white/95 via-white/90 to-transparent px-1 pb-1 pt-4">
           <button type="button" onClick={onClose} className="btn-ghost">
-            Cancel
+            Отмена
           </button>
           <button type="submit" disabled={!title.trim() || busy} className="btn-primary disabled:opacity-40">
-            {busy ? "Creating…" : "Create"}
+            {busy ? "Создаём…" : "Создать"}
           </button>
         </div>
       </form>

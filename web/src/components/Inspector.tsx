@@ -49,9 +49,9 @@ export default function Inspector({
   }
 
   const tabs: { id: Tab; label: string; icon: IconName }[] = [
-    { id: "versions", label: "Snapshots", icon: "history" },
-    { id: "comments", label: "Comments", icon: "message-square" },
-    { id: "continuity", label: "Continuity", icon: "shield-alert" },
+    { id: "versions", label: "Снимки", icon: "history" },
+    { id: "comments", label: "Комментарии", icon: "message-square" },
+    { id: "continuity", label: "Непрерывность", icon: "shield-alert" },
   ];
 
   return (
@@ -59,7 +59,7 @@ export default function Inspector({
       <div className="flex items-center gap-1.5 border-b border-[rgba(74,91,133,0.12)] px-2.5 py-2.5">
         <div
           role="tablist"
-          aria-label="Notes panel"
+          aria-label="Панель заметок"
           className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-[rgba(96,112,153,0.16)] bg-white/55 p-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           {tabs.map((t) => {
@@ -89,8 +89,8 @@ export default function Inspector({
             type="button"
             onClick={onClose}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-white/70 hover:text-ink"
-            aria-label="Close notes"
-            title="Close notes"
+            aria-label="Закрыть заметки"
+            title="Закрыть заметки"
           >
             <Icon name="chevron-right" className="h-4 w-4" />
           </button>
@@ -134,9 +134,9 @@ function Snapshots({ id, num, currentText, flush, onRestored }: {
     setBusy(true);
     try {
       await flush(); // persist the current buffer so the snapshot reflects it
-      await api.createSnapshot(id, num, label.trim() || "Version");
+      await api.createSnapshot(id, num, label.trim() || "Версия");
       setLabel("");
-      toast("Version saved", "success");
+      toast("Версия сохранена", "success");
       reload();
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
@@ -154,7 +154,7 @@ function Snapshots({ id, num, currentText, flush, onRestored }: {
   async function restore(sid: string) {
     try {
       const r = await api.restoreSnapshot(id, num, sid);
-      toast("Restored previous Final saved as a snapshot", "success");
+      toast("Восстановлен прежний чистовик; он сохранён как снимок", "success");
       setViewing(null);
       onRestored(r.final);
       reload();
@@ -163,9 +163,9 @@ function Snapshots({ id, num, currentText, flush, onRestored }: {
 
   async function remove(sid: string) {
     const ok = await confirm({
-      title: "Delete version",
-      message: "This permanently deletes this snapshot. It can't be undone.",
-      confirmLabel: "Delete",
+      title: "Удалить версию",
+      message: "Снимок будет удалён навсегда. Это нельзя отменить.",
+      confirmLabel: "Удалить",
       danger: true,
     });
     if (!ok) return;
@@ -179,36 +179,36 @@ function Snapshots({ id, num, currentText, flush, onRestored }: {
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="Label (optional)…"
+          placeholder="Подпись (необязательно)…"
           className="min-w-0 flex-1 rounded-lg border border-paper-line bg-paper px-3 py-1.5 text-[13px] text-ink-text placeholder:text-paper-muted"
         />
         <button onClick={saveVersion} disabled={busy}
                 className="btn-primary shrink-0 disabled:opacity-40">
-          {busy ? "Saving…" : "Save version"}
+          {busy ? "Сохранение…" : "Сохранить версию"}
         </button>
       </div>
 
-      {list.length === 0 && <p className="py-6 text-center text-[13px] text-ink-muted">No versions yet.</p>}
+      {list.length === 0 && <p className="py-6 text-center text-[13px] text-ink-muted">Версий пока нет.</p>}
 
       {list.map((s) => (
         <div key={s.id} className="rounded-lg border border-paper-line bg-paper-card p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate text-[13.5px] font-semibold text-ink-text">{s.label}</p>
-              <p className="nums text-[11.5px] text-ink-muted">{when(s.created_at)} · {s.word_count.toLocaleString()} words</p>
+              <p className="nums text-[11.5px] text-ink-muted">{when(s.created_at)} · {s.word_count.toLocaleString()} слов</p>
             </div>
           </div>
           <div className="mt-2 flex gap-3 text-[12px] font-medium">
             <button onClick={() => view(s.id)} className="text-st-drafted hover:underline">
-              {viewing?.id === s.id ? "Hide diff" : "Diff"}
+              {viewing?.id === s.id ? "Скрыть различия" : "Различия"}
             </button>
-            <button onClick={() => restore(s.id)} className="text-ink-muted hover:underline">Restore</button>
-            <button onClick={() => remove(s.id)} className="text-ink-muted hover:text-ink">Delete</button>
+            <button onClick={() => restore(s.id)} className="text-ink-muted hover:underline">Восстановить</button>
+            <button onClick={() => remove(s.id)} className="text-ink-muted hover:text-ink">Удалить</button>
           </div>
           {viewing?.id === s.id && (
             <div className="mt-3 max-h-72 overflow-y-auto rounded-md border border-paper-line bg-paper p-3">
               <p className="mb-2 text-[12px] font-medium tracking-[-0.01em] text-paper-muted">
-                Snapshot → current
+                Снимок → текущий текст
               </p>
               <DiffView oldText={viewing.text} newText={currentText} />
             </div>
@@ -265,7 +265,7 @@ function Comments({ id, num, pendingComment, onPendingCommentConsumed, onComment
 
   async function removeComment(cid: string) {
     const ok = await confirm({
-      title: "Delete note", message: "Delete this note?", confirmLabel: "Delete", danger: true,
+      title: "Удалить заметку", message: "Удалить эту заметку?", confirmLabel: "Удалить", danger: true,
     });
     if (ok) api.deleteComment(id, num, cid).then(reload).catch(() => {});
   }
@@ -279,11 +279,16 @@ function Comments({ id, num, pendingComment, onPendingCommentConsumed, onComment
     } catch (e) { toast(e instanceof Error ? e.message : String(e), "error"); }
   }
 
-  const personas: { id: "author" | "editor" | "beta"; label: string }[] = [
-    { id: "author", label: "Author" },
-    { id: "editor", label: "Editor" },
-    { id: "beta", label: "Beta" },
+  const personas: { id: "author" | "editor" | "beta"; label: string; placeholder: string }[] = [
+    { id: "author", label: "Автор", placeholder: "Добавьте заметку автора…" },
+    { id: "editor", label: "Редактор", placeholder: "Добавьте заметку редактора…" },
+    { id: "beta", label: "Бета", placeholder: "Добавьте заметку беты…" },
   ];
+  const personaLabel: Record<string, string> = {
+    author: "Автор",
+    editor: "Редактор",
+    beta: "Бета",
+  };
 
   return (
     <div className="flex flex-col gap-3 px-4 py-4">
@@ -308,28 +313,28 @@ function Comments({ id, num, pendingComment, onPendingCommentConsumed, onComment
           ))}
         </div>
         <input value={quote} onChange={(e) => setQuote(e.target.value)}
-               placeholder="Quote (optional)…"
+               placeholder="Цитата (необязательно)…"
                className="mb-2 w-full rounded-xl border border-[rgba(96,112,153,0.16)] bg-white/80 px-2.5 py-1.5 text-[12.5px] text-ink-text placeholder:text-paper-muted" />
         {fromPos != null && toPos != null && (
-          <p className="mb-2 text-[11px] text-ink-muted">Anchored · chars {fromPos}–{toPos}</p>
+          <p className="mb-2 text-[11px] text-ink-muted">Привязано · символы {fromPos}–{toPos}</p>
         )}
         <textarea value={body} onChange={(e) => setBody(e.target.value)}
-                  placeholder={`Add a ${persona} note…`} rows={2}
+                  placeholder={personas.find((p) => p.id === persona)?.placeholder ?? "Добавьте заметку…"} rows={2}
                   className="w-full resize-y rounded-xl border border-[rgba(96,112,153,0.16)] bg-white/80 px-3 py-2.5 text-[13px] leading-relaxed text-ink-text placeholder:text-paper-muted" />
         <div className="mt-2 flex justify-end">
           <button type="button" onClick={add} disabled={!body.trim()}
                   className="btn-primary disabled:opacity-40">
-            Add note
+            Добавить заметку
           </button>
         </div>
       </div>
 
-      {list.length === 0 && <p className="py-6 text-center text-[13px] text-ink-muted">No notes yet.</p>}
+      {list.length === 0 && <p className="py-6 text-center text-[13px] text-ink-muted">Заметок пока нет.</p>}
 
       {list.map((c) => (
         <div key={c.id} className={`rounded-2xl border border-[rgba(74,91,133,0.12)] p-3 ${c.resolved ? "bg-white/40 opacity-70" : "bg-white/70"}`}>
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-violet)]">
-            {c.persona || "author"}
+            {personaLabel[c.persona || "author"] ?? c.persona}
           </p>
           {c.quote && (
             <blockquote className="mb-1.5 border-l-2 border-[var(--color-violet)] pl-2 text-[12px] italic text-ink-muted">
@@ -337,7 +342,7 @@ function Comments({ id, num, pendingComment, onPendingCommentConsumed, onComment
             </blockquote>
           )}
           {c.anchor_status === "unresolved" && (
-            <p className="mb-1 text-[11px] font-medium text-[#c85177]">Anchor unresolved</p>
+            <p className="mb-1 text-[11px] font-medium text-[#c85177]">Привязка не найдена</p>
           )}
           <p className={`text-[13.5px] text-ink-text ${c.resolved ? "line-through" : ""}`}>{c.body}</p>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-[11.5px]">
@@ -345,15 +350,15 @@ function Comments({ id, num, pendingComment, onPendingCommentConsumed, onComment
             {c.from_pos != null && c.to_pos != null && c.anchor_status !== "unresolved" && (
               <button type="button" onClick={() => onJumpToComment?.(c)}
                       className="font-medium text-[var(--color-violet)] hover:underline">
-                Show
+                Показать
               </button>
             )}
             <button type="button" onClick={() => api.updateComment(id, num, c.id, !c.resolved).then(reload)}
                     className="font-medium text-st-approved hover:underline">
-              {c.resolved ? "Reopen" : "Resolve"}
+              {c.resolved ? "Открыть снова" : "Решено"}
             </button>
             <button type="button" onClick={() => removeComment(c.id)}
-                    className="font-medium text-ink-muted hover:text-ink">Delete</button>
+                    className="font-medium text-ink-muted hover:text-ink">Удалить</button>
           </div>
         </div>
       ))}
@@ -386,7 +391,7 @@ function IntentionalButton({
     setBusy(true);
     try {
       await api.exemptFinding(projectId, finding.key, reason);
-      toast("Marked intentional — it won't be raised again", "success");
+      toast("Отмечено: так задумано — больше не появится", "success");
       setOpen(false);
       setReason("");
       onExempted();
@@ -404,7 +409,7 @@ function IntentionalButton({
         className="btn-ghost mt-2 px-2 py-0.5 text-[11.5px]"
         onClick={() => setOpen(true)}
       >
-        This is intentional
+        Так задумано
       </button>
     );
   }
@@ -419,22 +424,49 @@ function IntentionalButton({
           if (e.key === "Enter") void submit();
           if (e.key === "Escape") setOpen(false);
         }}
-        placeholder="Why? e.g. she lies about it"
-        aria-label="Why is this intentional?"
+        placeholder="Почему? Например, она об этом врёт"
+        aria-label="Почему так задумано?"
         className="min-w-0 flex-1 rounded-lg border border-[rgba(96,112,153,0.2)] bg-white/80 px-2 py-1 text-[12px] text-ink-text"
       />
       <button type="button" className="btn-ghost px-2 py-0.5 text-[11.5px]"
               onClick={() => setOpen(false)}>
-        Cancel
+        Отмена
       </button>
       <button type="button" disabled={busy}
               className="btn-secondary px-2 py-0.5 text-[11.5px] disabled:opacity-40"
               onClick={() => void submit()}>
-        {busy ? "Saving…" : "Dismiss"}
+        {busy ? "Сохранение…" : "Готово"}
       </button>
     </div>
   );
 }
+
+const SEVERITY_LABEL: Record<string, string> = {
+  critical: "критично",
+  warning: "предупреждение",
+  info: "инфо",
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  dormant_thread: "спящая нить",
+  overdue_thread: "просроченная нить",
+  unresolved_foreshadowing: "нераскрытый намёк",
+  never_appeared: "так и не появился",
+  absent_character: "персонаж отсутствует",
+  dead_character_state: "состояние умершего персонажа",
+  missing_chapter_file: "нет файла главы",
+  status_drift: "статус разошёлся",
+  thin_character: "мало проработан",
+  relationship_self: "связь с собой",
+  relationship_orphan: "связь без пары",
+  hostile_co_presence: "враги в одной сцене",
+  relationship_since_anachronism: "анахронизм связи",
+  relationship_contradiction: "противоречие в связи",
+  dead_character_co_presence: "умерший в сцене",
+  stalled_middle: "застой в середине",
+  eye_colour: "цвет глаз",
+  timeline: "хронология",
+};
 
 function ContinuityPanel({ id, num }: { id: string; num: number }) {
   const [findings, setFindings] = useState<ContinuityFinding[] | null>(null);
@@ -463,28 +495,28 @@ function ContinuityPanel({ id, num }: { id: string; num: number }) {
     <div className="flex flex-col gap-3 px-4 py-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[12px] text-ink-muted">
-          Deterministic checks free and instant.
+          Проверки мгновенные и бесплатные.
         </p>
-        <button type="button" onClick={load} className="btn-ghost text-[12px]">Refresh</button>
+        <button type="button" onClick={load} className="btn-ghost text-[12px]">Обновить</button>
       </div>
       {findings && (
         <div className="flex gap-2 text-[11px]">
-          <span className="rounded-full bg-[#ffeaf1] px-2 py-0.5 text-[#c85177]">{counts.critical} critical</span>
-          <span className="rounded-full bg-[#fff2dc] px-2 py-0.5 text-[#c47a1b]">{counts.warning} warning</span>
-          <span className="rounded-full bg-[#e8f1ff] px-2 py-0.5 text-[#3974db]">{counts.info} info</span>
+          <span className="rounded-full bg-[#ffeaf1] px-2 py-0.5 text-[#c85177]">{counts.critical} критично</span>
+          <span className="rounded-full bg-[#fff2dc] px-2 py-0.5 text-[#c47a1b]">{counts.warning} предупреждение</span>
+          <span className="rounded-full bg-[#e8f1ff] px-2 py-0.5 text-[#3974db]">{counts.info} инфо</span>
         </div>
       )}
       {error && <p className="text-[13px] text-[#c85177]">{error}</p>}
-      {!error && !findings && <p className="py-6 text-center text-[13px] text-ink-muted">Running checks…</p>}
+      {!error && !findings && <p className="py-6 text-center text-[13px] text-ink-muted">Идут проверки…</p>}
       {findings && findings.length === 0 && (
-        <p className="py-8 text-center text-[13px] text-ink-muted">No continuity findings.</p>
+        <p className="py-8 text-center text-[13px] text-ink-muted">Замечаний по непрерывности нет.</p>
       )}
       {findings?.map((f, i) => (
         <div key={`${f.category}-${i}`} className="rounded-2xl border border-[rgba(74,91,133,0.12)] bg-white/70 p-3">
           <div className="mb-1 flex items-center gap-1.5 text-[11px] font-medium capitalize text-ink-muted">
             <Icon name={iconFor(f.severity)} className="h-3.5 w-3.5" />
-            {f.severity} · {f.category.replace(/_/g, " ")}
-            {f.chapter != null && <> · Ch {f.chapter}</>}
+            {SEVERITY_LABEL[f.severity] ?? f.severity} · {CATEGORY_LABEL[f.category] ?? f.category.replace(/_/g, " ")}
+            {f.chapter != null && <> · Гл. {f.chapter}</>}
           </div>
           <p className="text-[13px] text-ink-text">{f.message}</p>
           {f.suggestion && (

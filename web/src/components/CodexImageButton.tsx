@@ -3,6 +3,13 @@ import { api, type CodexEntry, type MediaKind } from "../api/client";
 import Icon from "./Icon";
 import { useToast } from "./toastContext";
 
+const CALLED_LABELS: Record<string, string> = {
+  "Place photo": "Фото места",
+  "Item image": "Изображение предмета",
+  Reference: "Референс",
+  Portrait: "Портрет",
+};
+
 function mediaKindFor(entryType: string): MediaKind {
   if (entryType === "location") return "location";
   if (entryType === "character") return "portrait";
@@ -43,7 +50,7 @@ export default function CodexImageButton({
         entry.name,
       );
       await api.setPortrait(projectId, entry.id, media.id, entry.entry_type);
-      toast("Image saved", "success");
+      toast("Изображение сохранено", "success");
       onUpdated();
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
@@ -57,7 +64,7 @@ export default function CodexImageButton({
     setBusy(true);
     try {
       await api.setPortrait(projectId, entry.id, "", entry.entry_type);
-      toast("Image removed", "success");
+      toast("Изображение удалено", "success");
       onUpdated();
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
@@ -67,16 +74,16 @@ export default function CodexImageButton({
   }
 
   const emptyHint =
-    entry.entry_type === "location" ? "Add place photo"
-      : entry.entry_type === "item" ? "Add item image"
-        : entry.entry_type === "worldbuilding" ? "Add reference"
-          : "Add portrait";
+    entry.entry_type === "location" ? "Добавить фото места"
+      : entry.entry_type === "item" ? "Добавить изображение предмета"
+        : entry.entry_type === "worldbuilding" ? "Добавить референс"
+          : "Добавить портрет";
 
   return (
     <div className="flex flex-col items-center gap-1.5">
       <button
         type="button"
-        title={src ? "Replace image" : emptyHint}
+        title={src ? "Заменить изображение" : emptyHint}
         disabled={busy}
         onClick={() => inputRef.current?.click()}
         className={`group relative flex ${dim} shrink-0 items-center justify-center overflow-hidden ${radius} bg-gradient-to-br from-[#eeedff] to-[#e7e7ff] text-[var(--color-violet)] transition hover:ring-2 hover:ring-[rgba(104,103,234,0.35)] disabled:opacity-50`}
@@ -118,7 +125,7 @@ export default function CodexImageButton({
               onClick={() => inputRef.current?.click()}
               className="text-[11.5px] font-medium text-[var(--color-violet)] hover:underline disabled:opacity-40"
             >
-              {src ? "Replace" : label}
+              {src ? "Заменить" : (CALLED_LABELS[label] ?? label)}
             </button>
           )}
           {src && (
@@ -128,7 +135,7 @@ export default function CodexImageButton({
               onClick={() => void clear()}
               className="text-[11.5px] text-ink-muted hover:text-[#c85177] disabled:opacity-40"
             >
-              Remove
+              Удалить
             </button>
           )}
         </div>

@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 
 from fastapi import Response
 from fastapi.responses import PlainTextResponse
@@ -13,6 +13,7 @@ from .models import (
     CodexProposal, ContinuityExemption, ExemptFinding, BookShape, StyleSheetOut,
     ChapterSummary, CharacterSummary, CodexEntryOut, Comment, ConsequenceAccept,
     ConsequenceAcceptResult, ConsequencePreview, ConsequencePreviewRequest, ContinuityReport,
+    CritiqueResult,
     ContinueParagraph, ContinueResult, CreateProject, CreateSnapshot, FinalDoc, FinalDocSave,
     FinalResult, FinalSave, Job, MediaOut, ProjectDetail, ProjectSummary, RelationshipOut,
     RunPhase, SearchHit, CollectionOut, CreateCollection, SetPortrait, SnapshotMeta, SnapshotText, StageDiff, StageReviewRequest,
@@ -75,6 +76,9 @@ def put_studio_llm(body: StudioLlmUpdate):
         patch["NOVEL_OS_BASE_URL"] = body.base_url.strip() or None
     if body.onboarding_completed is not None:
         patch["onboarding_completed"] = body.onboarding_completed
+    if body.autonomy_model is not None:
+        # Stored beside the studio model. It must not replace NOVEL_OS_MODEL.
+        patch["autonomy_model"] = body.autonomy_model.strip() or None
     studio_settings.save_settings(patch)
     return studio_settings.llm_status()
 
@@ -841,9 +845,10 @@ def review_stage(
 
 @router.post("/projects/{project_id}/chapters/{number}/final/promote", response_model=FinalResult)
 def promote_final(project_id: str, number: int, force: bool = False,
+                  source: str | None = None,
                   svc: ProjectService = Depends(get_service)):
     try:
-        text = svc.promote_final(project_id, number, force=force)
+        text = svc.promote_final(project_id, number, force=force, source=source)
         return FinalResult(final=text, word_count=len(text.split()))
     except (ProjectNotFound, ChapterNotFound) as e:
         raise _not_found(project_id, number, e)
@@ -898,6 +903,50 @@ def consequence_preview(project_id: str, number: int, body: ConsequencePreviewRe
             before_context=body.before_context, after_context=body.after_context,
         )
         return ConsequencePreview(**result)
+    except ProjectNotFound:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+    except ChapterNotFound:
+        raise HTTPException(status_code=404, detail=f"Chapter {number} not found")
+    except BadRequest as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/projects/{project_id}/chapters/{number}/critique",
+    response_model=CritiqueResult,
+)
+def critique_chapter(
+    project_id: str,
+    number: int,
+    criterion: str = Query(...),
+    svc: ProjectService = Depends(get_service),
+):
+    """One prose check: pace, repetition, or causality."""
+    try:
+        result = svc.critique_chapter(project_id, number, criterion)
+        return CritiqueResult(**result)
+    except ProjectNotFound:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+    except ChapterNotFound:
+        raise HTTPException(status_code=404, detail=f"Chapter {number} not found")
+    except BadRequest as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/projects/{project_id}/chapters/{number}/critique/autonomous",
+    response_model=CritiqueResult,
+)
+def critique_autonomous(
+    project_id: str,
+    number: int,
+    criterion: str = Query(...),
+    svc: ProjectService = Depends(get_service),
+):
+    """One cheap pass: critique, rewrite the clean copy, critique again."""
+    try:
+        result = svc.autonomous_critique(project_id, number, criterion)
+        return CritiqueResult(**result)
     except ProjectNotFound:
         raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
     except ChapterNotFound:

@@ -4,6 +4,37 @@ import { AnimatePresence, motion } from "motion/react";
 import { api, type CodexEntry, type RelationshipEdge } from "../api/client";
 import Icon from "./Icon";
 
+const ENTRY_TYPE_LABELS: Record<string, string> = {
+  character: "Персонаж",
+  location: "Место",
+  worldbuilding: "Мир",
+  item: "Предмет",
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  protagonist: "Протагонист",
+  antagonist: "Антагонист",
+  supporting: "Второстепенный",
+  minor: "Эпизодический",
+};
+
+const BOND_LABELS: Record<string, string> = {
+  ally: "Союзник",
+  rival: "Соперник",
+  family: "Семья",
+  romantic: "Роман",
+  mentor: "Наставник",
+  enemy: "Враг",
+  "owes debt": "Должен",
+  secret: "Тайна",
+  unknown: "Неясно",
+  other: "Другое",
+};
+
+function bondLabel(value: string): string {
+  return BOND_LABELS[value] ?? BOND_LABELS[value.toLowerCase()] ?? value;
+}
+
 /** Left-click popover on a Codex mention in Final (R1). */
 export default function EntityPopover({
   open,
@@ -79,8 +110,8 @@ export default function EntityPopover({
             <div className="min-w-0">
               <p className="truncate font-display text-[15px] font-semibold text-ink-text">{entry.name}</p>
               <p className="text-[12px] capitalize text-ink-muted">
-                {entry.entry_type === "worldbuilding" ? "World" : entry.entry_type}
-                {entry.role ? ` · ${entry.role}` : ""}
+                {ENTRY_TYPE_LABELS[entry.entry_type] ?? entry.entry_type}
+                {entry.role ? ` · ${ROLE_LABELS[entry.role] ?? entry.role}` : ""}
               </p>
             </div>
           </div>
@@ -96,7 +127,7 @@ export default function EntityPopover({
                     : (e.source_name || e.source_id);
                 return (
                   <li key={e.id} className="truncate text-[12px] text-ink-muted">
-                    <span className="capitalize">{e.label}</span>
+                    <span className="capitalize">{bondLabel(e.label)}</span>
                     {" · "}
                     <span className="font-medium text-ink-text">{other}</span>
                   </li>
@@ -110,18 +141,18 @@ export default function EntityPopover({
               onClick={onClose}
               className="btn-secondary inline-flex items-center gap-1 px-2.5 py-1 text-[12px]"
             >
-              <Icon name="users" className="h-3 w-3" /> Open Codex
+              <Icon name="users" className="h-3 w-3" /> Открыть Кодекс
             </Link>
             <Link
               to={`/projects/${projectId}/chart`}
               onClick={onClose}
               className="btn-ghost inline-flex items-center gap-1 px-2.5 py-1 text-[12px]"
             >
-              <Icon name="waypoints" className="h-3 w-3" /> Chart
+              <Icon name="waypoints" className="h-3 w-3" /> Связи
             </Link>
             {onAddRelationship && (
               <button type="button" onClick={() => { onAddRelationship(); onClose(); }} className="btn-ghost px-2.5 py-1 text-[12px]">
-                Link…
+                Связать…
               </button>
             )}
           </div>

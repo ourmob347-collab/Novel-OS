@@ -20,31 +20,35 @@ _ENV_KEYS = (
     "DEEPSEEK_API_KEY",
 )
 
+# Cheap model for autonomous pace/repetition fixes. Same provider and key as
+# the studio model; only the model id changes.
+DEFAULT_AUTONOMY_MODEL = "anthropic/claude-haiku-5.5"
+
 PRESETS: dict[str, dict[str, str]] = {
     "quality": {
-        "label": "Quality",
-        "hint": "Best prose and planning (Claude / strong cloud).",
+        "label": "Качество",
+        "hint": "Лучшая проза и план (Claude и сильные облачные модели).",
         "provider": "anthropic",
         "model": "claude-sonnet-4-6",
         "mature_capable": "false",
     },
     "fast": {
-        "label": "Fast",
-        "hint": "Cheaper / quicker drafts.",
+        "label": "Быстро",
+        "hint": "Дешевле и быстрее для черновиков.",
         "provider": "openai",
         "model": "gpt-4o-mini",
         "mature_capable": "false",
     },
     "local": {
-        "label": "Local",
-        "hint": "Ollama / LM Studio private, mature-capable if your model is.",
+        "label": "Локально",
+        "hint": "Ollama или LM Studio у себя. Взрослый текст — если модель это умеет.",
         "provider": "ollama",
         "model": "llama3.2",
         "mature_capable": "true",
     },
     "mature": {
-        "label": "Mature-capable",
-        "hint": "OpenRouter / uncensored routes. Not a hosted NSFW model.",
+        "label": "Без цензуры",
+        "hint": "OpenRouter и несдержанные маршруты. Это не своя модель для взрослого текста.",
         "provider": "openrouter",
         "model": "deepseek/deepseek-chat",
         "mature_capable": "true",
@@ -104,6 +108,11 @@ def save_settings(patch: dict[str, Any]) -> dict[str, Any]:
     return current
 
 
+def autonomy_model() -> str:
+    saved = str(load_settings().get("autonomy_model") or "").strip()
+    return saved or DEFAULT_AUTONOMY_MODEL
+
+
 def llm_status() -> dict[str, Any]:
     """Resolve current provider without raising (for Studio UI)."""
     from core.llm_client import LLMClient, LLMError
@@ -144,4 +153,5 @@ def llm_status() -> dict[str, Any]:
             for k, v in PRESETS.items()
         ],
         "onboarding_completed": bool(saved.get("onboarding_completed", False)),
+        "autonomy_model": autonomy_model(),
     }

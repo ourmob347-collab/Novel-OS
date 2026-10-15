@@ -37,6 +37,38 @@ DORMANT_THREAD_GAP_CHAPTERS = 3
 ABSENT_CHARACTER_GAP_CHAPTERS = 5
 DEAD_KEYWORDS = ("dead", "killed", "deceased", "died")
 
+_ROLE_RU = {
+    "protagonist": "протагонист",
+    "antagonist": "антагонист",
+    "supporting": "второстепенный",
+    "minor": "эпизодический",
+}
+_STATUS_RU = {
+    "planned": "в плане",
+    "drafting": "пишется",
+    "drafted": "черновик",
+    "editing": "на правке",
+    "edited": "отредактировано",
+    "validated": "проверено",
+    "complete": "готово",
+}
+_BOND_RU = {
+    "ally": "союзник",
+    "rival": "соперник",
+    "family": "семья",
+    "romantic": "роман",
+    "mentor": "наставник",
+    "enemy": "враг",
+    "owes debt": "должен",
+    "secret": "тайна",
+    "unknown": "неясно",
+}
+
+
+def _ru(table: dict, value: str) -> str:
+    key = (value or "").strip().lower()
+    return table.get(key, value)
+
 
 # --------------------------------------------------------------------- Finding
 
@@ -97,9 +129,9 @@ def check_dormant_threads(state: "StoryState", as_of_chapter: Optional[int] = No
             out.append(Finding(
                 severity="warning",
                 category="dormant_thread",
-                message=f"Plot thread '{thread.name}' (priority {thread.priority}) "
-                        f"has not advanced in {gap} chapters (last touched ch{last_seen}).",
-                suggestion="Touch this thread in the next chapter or mark it resolved/abandoned.",
+                message=f"Нить «{thread.name}» (приоритет {thread.priority}) "
+                        f"не двигалась {gap} глав (последний раз — гл. {last_seen}).",
+                suggestion="Заденьте нить в следующей главе или закройте её.",
                 chapter=cur,
                 entity_id=thread.id,
             ))
@@ -117,9 +149,9 @@ def check_overdue_threads(state: "StoryState", as_of_chapter: Optional[int] = No
             out.append(Finding(
                 severity="critical",
                 category="overdue_thread",
-                message=f"Plot thread '{thread.name}' was scheduled to resolve by ch{target}, "
-                        f"current chapter is {cur} and it's still active.",
-                suggestion="Resolve, abandon, or push target_resolution_chapter.",
+                message=f"Нить «{thread.name}» должна была закрыться к гл. {target}, "
+                        f"сейчас глава {cur}, а нить всё ещё открыта.",
+                suggestion="Закройте нить, бросьте её или сдвиньте срок.",
                 chapter=cur,
                 entity_id=thread.id,
             ))
@@ -152,9 +184,9 @@ def check_unresolved_foreshadowing(state: "StoryState", as_of_chapter: Optional[
             out.append(Finding(
                 severity="warning",
                 category="unresolved_foreshadowing",
-                message=f"Foreshadowing planted in ch{ch.number} not yet paid off "
-                        f"({gap} chapters later): {fs[:80]}",
-                suggestion="Pay it off, hint at it again, or accept and document.",
+                message=f"Предвестие из гл. {ch.number} ещё не закрыто "
+                        f"(прошло глав: {gap}): {fs[:80]}",
+                suggestion="Закройте его, напомните о нём или отметьте «так задумано».",
                 chapter=ch.number,
             ))
     return out
@@ -174,8 +206,8 @@ def check_absent_characters(state: "StoryState", as_of_chapter: Optional[int] = 
                 out.append(Finding(
                     severity="warning",
                     category="never_appeared",
-                    message=f"{char.full_name} ({char.role}) has not appeared in any chapter yet.",
-                    suggestion="Introduce them or downgrade role.",
+                    message=f"{char.full_name} ({_ru(_ROLE_RU, char.role)}) ещё не появлялся ни в одной главе.",
+                    suggestion="Выведите персонажа или понизьте роль.",
                     entity_id=char.id,
                 ))
             continue
@@ -184,9 +216,9 @@ def check_absent_characters(state: "StoryState", as_of_chapter: Optional[int] = 
             out.append(Finding(
                 severity="warning",
                 category="absent_character",
-                message=f"{char.full_name} ({char.role}) hasn't appeared in {gap} chapters "
-                        f"(last: ch{char.last_appearance_chapter}).",
-                suggestion="Reintroduce, reference, or document the absence.",
+                message=f"{char.full_name} ({_ru(_ROLE_RU, char.role)}) не появлялся {gap} глав "
+                        f"(последний раз — гл. {char.last_appearance_chapter}).",
+                suggestion="Верните персонажа, упомяните его или зафиксируйте отсутствие.",
                 chapter=cur,
                 entity_id=char.id,
             ))
@@ -206,9 +238,9 @@ def check_dead_characters_reappearing(state: "StoryState") -> List[Finding]:
         out.append(Finding(
             severity="warning",
             category="dead_character_state",
-            message=f"{char.full_name} is flagged as dead/killed but state still tracks them "
-                    f"as active (last ch{char.last_appearance_chapter}).",
-            suggestion="If resurrection/flashback is intentional, document it; otherwise set role=minor and freeze state.",
+            message=f"{char.full_name} отмечен как мёртвый, но состояние всё ещё считает его "
+                    f"действующим (последний раз — гл. {char.last_appearance_chapter}).",
+            suggestion="Если воскрешение или флешбэк задуманы, запишите это; иначе поставьте роль «эпизодический» и заморозьте состояние.",
             entity_id=char.id,
         ))
     return out
@@ -227,16 +259,16 @@ def check_chapter_file_consistency(state: "StoryState", project_path: Path) -> L
             out.append(Finding(
                 severity="critical",
                 category="missing_chapter_file",
-                message=f"Chapter {ch.number} status is '{ch.status}' but no draft/revised file exists.",
-                suggestion="Re-run write/edit, or correct the status field.",
+                message=f"Глава {ch.number}: статус «{_ru(_STATUS_RU, ch.status)}», а файла черновика или правки нет.",
+                suggestion="Запустите письмо или правку снова либо поправьте статус.",
                 chapter=ch.number,
             ))
         if ch.status == "planned" and has_draft:
             out.append(Finding(
                 severity="info",
                 category="status_drift",
-                message=f"Chapter {ch.number} has a draft file but status is still 'planned'.",
-                suggestion="Bump status to 'drafted' (re-submit via `write --draft-file`).",
+                message=f"У главы {ch.number} есть файл черновика, а статус всё ещё «в плане».",
+                suggestion="Поставьте статус «черновик».",
                 chapter=ch.number,
             ))
     return out
@@ -249,8 +281,8 @@ def check_required_character_fields(state: "StoryState") -> List[Finding]:
             out.append(Finding(
                 severity="info",
                 category="thin_character",
-                message=f"{char.full_name} ({char.role}) has no internal_desire set.",
-                suggestion="A protagonist/antagonist without an internal desire is fragile.",
+                message=f"У {char.full_name} ({_ru(_ROLE_RU, char.role)}) не задано внутреннее желание.",
+                suggestion="Протагонист или антагонист без внутреннего желания держится слабо.",
                 entity_id=char.id,
             ))
     return out
@@ -298,8 +330,8 @@ def check_relationship_integrity(state: "StoryState") -> List[Finding]:
             out.append(Finding(
                 severity="warning",
                 category="relationship_self",
-                message=f"Relationship '{edge.label}' links an entry to itself ({edge.source_id}).",
-                suggestion="Delete this edge.",
+                message=f"Связь «{_ru(_BOND_RU, edge.label)}» замыкает запись на саму себя ({edge.source_id}).",
+                suggestion="Удалите эту связь.",
                 entity_id=edge.id,
             ))
             continue
@@ -308,8 +340,8 @@ def check_relationship_integrity(state: "StoryState") -> List[Finding]:
             out.append(Finding(
                 severity="warning",
                 category="relationship_orphan",
-                message=f"Relationship '{edge.label}' references missing Codex id(s): {', '.join(missing)}.",
-                suggestion="Delete the edge or restore the missing entry.",
+                message=f"Связь «{_ru(_BOND_RU, edge.label)}» ссылается на отсутствующие записи Кодекса: {', '.join(missing)}.",
+                suggestion="Удалите связь или верните недостающую запись.",
                 entity_id=edge.id,
             ))
     return out
@@ -343,9 +375,9 @@ def check_hostile_pairs_co_present(
         out.append(Finding(
             severity="warning",
             category="hostile_co_presence",
-            message=f"{an} and {bn} are both present in chapter {cur} but Codex still "
-                    f"marks them as '{edge.label}'.",
-            suggestion="Update the relationship on the chart, or confirm the hostility is intentional.",
+            message=f"{an} и {bn} оба в главе {cur}, а Кодекс всё ещё "
+                    f"помечает их как «{_ru(_BOND_RU, edge.label)}».",
+            suggestion="Обновите связь на схеме или подтвердите, что вражда задумана.",
             chapter=cur,
             entity_id=edge.id,
         ))
@@ -379,9 +411,9 @@ def check_relationship_since_anachronism(
         out.append(Finding(
             severity="warning",
             category="relationship_since_anachronism",
-            message=f"Chapter {cur} presents {an} with {bn} as '{edge.label}', but the edge "
-                    f"is marked since_chapter={since}.",
-            suggestion="Lower since_chapter, or keep them from sharing the scene until then.",
+            message=f"Глава {cur} сводит {an} и {bn} как «{_ru(_BOND_RU, edge.label)}», "
+                    f"но связь помечена с главы {since}.",
+            suggestion="Сдвиньте начало связи раньше или не сводите их в одной сцене до той главы.",
             chapter=cur,
             entity_id=edge.id,
         ))
@@ -411,9 +443,9 @@ def check_contradictory_relationships(state: "StoryState") -> List[Finding]:
         out.append(Finding(
             severity="warning",
             category="relationship_contradiction",
-            message=f"{an} and {bn} have conflicting active bonds: "
-                    f"{', '.join(sorted(hostile))} vs {', '.join(sorted(intimate))}.",
-            suggestion="Resolve on the chart (e.g. strained enemies, or retire one edge).",
+            message=f"У {an} и {bn} противоречат друг другу действующие связи: "
+                    f"{', '.join(_ru(_BOND_RU, x) for x in sorted(hostile))} и {', '.join(_ru(_BOND_RU, x) for x in sorted(intimate))}.",
+            suggestion="Разведите это на схеме: оставьте одну связь или закройте лишнюю.",
             entity_id=edges[0].id,
         ))
     return out
@@ -446,9 +478,9 @@ def check_dead_bonded_co_presence(
             out.append(Finding(
                 severity="critical",
                 category="dead_character_co_presence",
-                message=f"{char.full_name} is flagged dead/killed but shares chapter {cur} "
-                        f"with {on} (bond '{edge.label}').",
-                suggestion="Mark the scene as flashback/resurrection in notes, or remove them from the cast.",
+                message=f"{char.full_name} отмечен как мёртвый, но в главе {cur} "
+                        f"рядом с {on} (связь «{_ru(_BOND_RU, edge.label)}»).",
+                suggestion="Пометьте сцену как флешбэк или воскрешение в заметках либо уберите персонажа из состава.",
                 chapter=cur,
                 entity_id=edge.id,
             ))

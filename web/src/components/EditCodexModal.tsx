@@ -55,7 +55,7 @@ export default function EditCodexModal({
     e.preventDefault();
     if (!entry || busy) return;
     if (!name.trim()) {
-      toast("Name cannot be empty.", "error");
+      toast("Имя не может быть пустым.", "error");
       return;
     }
 
@@ -74,7 +74,7 @@ export default function EditCodexModal({
     setBusy(true);
     try {
       await api.updateCodexEntry(projectId, entry.id, changes);
-      toast("Saved", "success");
+      toast("Сохранено", "success");
       onSaved();
       onClose();
     } catch (err) {
@@ -85,55 +85,55 @@ export default function EditCodexModal({
   }
 
   return (
-    <Modal open={open && entry != null} onClose={onClose} title={`Edit ${entry?.name ?? ""}`}>
+    <Modal open={open && entry != null} onClose={onClose} title={`Изменить ${entry?.name ?? ""}`}>
       <form onSubmit={save}>
-        <Field label="Name">
+        <Field label="Имя">
           <input
             className={fieldClass}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            aria-label="Name"
+            aria-label="Имя"
           />
         </Field>
 
         {isPerson && (
-          <Field label="Role">
+          <Field label="Роль">
             <input
               className={fieldClass}
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              placeholder="protagonist, antagonist, supporting…"
-              aria-label="Role"
+              placeholder="протагонист, антагонист, второстепенный…"
+              aria-label="Роль"
             />
           </Field>
         )}
 
-        <Field label="Summary">
+        <Field label="Кратко">
           <textarea
             className={fieldClass}
             rows={2}
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
-            aria-label="Summary"
+            aria-label="Кратко"
           />
         </Field>
 
-        <Field label="Notes">
+        <Field label="Заметки">
           <textarea
             className={fieldClass}
             rows={4}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            aria-label="Notes"
+            aria-label="Заметки"
           />
         </Field>
 
         <div className="mt-5 flex justify-end gap-3">
           <button type="button" className="btn-ghost" onClick={onClose}>
-            Cancel
+            Отмена
           </button>
           <button type="submit" className="btn-primary disabled:opacity-40" disabled={busy}>
-            {busy ? "Saving…" : "Save"}
+            {busy ? "Сохранение…" : "Сохранить"}
           </button>
         </div>
       </form>

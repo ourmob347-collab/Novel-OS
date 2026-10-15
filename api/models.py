@@ -53,6 +53,7 @@ class StudioLlmUpdate(BaseModel):
     api_key: str | None = None
     base_url: str | None = None
     onboarding_completed: bool | None = None
+    autonomy_model: str | None = None
 
 
 class StudioLlmStatus(BaseModel):
@@ -64,6 +65,7 @@ class StudioLlmStatus(BaseModel):
     error: str | None = None
     presets: list[dict]
     onboarding_completed: bool = False
+    autonomy_model: str = "anthropic/claude-haiku-5.5"
 
 
 class ContinuityFinding(BaseModel):
@@ -90,6 +92,7 @@ class ChapterSummary(BaseModel):
     title: str
     status: str
     word_count: int
+    char_count: int = 0
     pov: str
     target_word_count: int = 2500
 
@@ -434,6 +437,18 @@ class ConsequenceAcceptResult(BaseModel):
     final: FinalDoc
     changelog: list[str] = []
     continuity: ContinuityReport
+
+
+class CritiqueItem(BaseModel):
+    quote: str
+    note: str
+    instruction: str
+
+
+class CritiqueResult(BaseModel):
+    criterion: str
+    verdict: str
+    items: list[CritiqueItem] = []
 
 
 class FinalDocSave(BaseModel):

@@ -251,6 +251,29 @@ def test_pre_p1_final_converts_from_markdown_on_read(tmp_path):
     assert (manuscript / "chapter_001_final.md").read_text(encoding="utf-8") == original
 
 
+def test_empty_editor_doc_does_not_wipe_an_existing_final(tmp_path):
+    """Navigating away mounts a blank editor; that must not erase the manuscript."""
+    client, proj = _project(tmp_path)
+    manuscript = proj / "outputs" / "manuscript"
+    manuscript.mkdir(parents=True)
+    original = "She kept the lantern lit.\n"
+    (manuscript / "chapter_001_final.md").write_text(original, encoding="utf-8")
+    # Seed the stored document the way a previous save would.
+    client.put(
+        "/api/projects/book/chapters/1/final/doc",
+        json={"doc": rt.from_markdown(original)},
+    )
+
+    resp = client.put(
+        "/api/projects/book/chapters/1/final/doc",
+        json={"doc": {"type": "doc", "content": [{"type": "paragraph"}]}},
+    )
+    assert resp.status_code == 200
+    assert (manuscript / "chapter_001_final.md").read_text(encoding="utf-8").strip() == original.strip()
+    again = client.get("/api/projects/book/chapters/1/final/doc").json()
+    assert "lantern" in again["markdown"]
+
+
 def test_saving_a_doc_writes_the_markdown_projection_to_disk(tmp_path):
     """The .md file is what agents read, so it must track every save."""
     client, proj = _project(tmp_path)

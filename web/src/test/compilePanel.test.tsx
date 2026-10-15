@@ -43,16 +43,16 @@ beforeEach(() => {
 
 test("shows only the styles a writer actually changes", async () => {
   renderPanel();
-  expect(await screen.findByText("Chapter title")).toBeInTheDocument();
-  expect(screen.getByText("Body")).toBeInTheDocument();
-  expect(screen.getByText("Block quote")).toBeInTheDocument();
+  expect(await screen.findByText("Заголовок главы")).toBeInTheDocument();
+  expect(screen.getByText("Основной текст")).toBeInTheDocument();
+  expect(screen.getByText("Цитата")).toBeInTheDocument();
   // The full sheet has seven roles; a panel of all of them is a settings screen.
   expect(screen.queryByText("First paragraph")).not.toBeInTheDocument();
 });
 
 test("the compile link carries the chosen format", async () => {
   renderPanel();
-  const link = await screen.findByRole("link", { name: /Compile/ });
+  const link = await screen.findByRole("link", { name: /Собрать/ });
   expect(link).toHaveAttribute("href", expect.stringContaining("format=html"));
 });
 
@@ -60,10 +60,10 @@ test("editing a size and saving sends the whole sheet", async () => {
   const save = vi.spyOn(api, "saveStyles").mockResolvedValue(structuredClone(SHEET));
   renderPanel();
 
-  const size = await screen.findByLabelText("Body size in points");
+  const size = await screen.findByLabelText("Основной текст, кегль");
   await userEvent.clear(size);
   await userEvent.type(size, "13");
-  await userEvent.click(screen.getByRole("button", { name: "Save styles" }));
+  await userEvent.click(screen.getByRole("button", { name: "Сохранить стили" }));
 
   await waitFor(() => expect(save).toHaveBeenCalled());
   const sent = save.mock.calls[0][1];
@@ -76,10 +76,10 @@ test("the scene break marker is editable", async () => {
   const save = vi.spyOn(api, "saveStyles").mockResolvedValue(structuredClone(SHEET));
   renderPanel();
 
-  const marker = await screen.findByLabelText("Scene break marker");
+  const marker = await screen.findByLabelText("Знак разрыва сцены");
   await userEvent.clear(marker);
   await userEvent.type(marker, "~~~");
-  await userEvent.click(screen.getByRole("button", { name: "Save styles" }));
+  await userEvent.click(screen.getByRole("button", { name: "Сохранить стили" }));
 
   await waitFor(() => expect(save).toHaveBeenCalled());
   expect(save.mock.calls[0][1].scene_break_marker).toBe("~~~");
@@ -91,10 +91,10 @@ test("a rejected sheet surfaces the reason and keeps the panel open", async () =
   );
   renderPanel();
 
-  await userEvent.click(await screen.findByRole("button", { name: "Save styles" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Сохранить стили" }));
 
   expect(await screen.findByText(/size must be between 4 and 96/)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Save styles" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Сохранить стили" })).toBeInTheDocument();
 });
 
 test("renders nothing if the stylesheet cannot be loaded", async () => {
@@ -103,7 +103,7 @@ test("renders nothing if the stylesheet cannot be loaded", async () => {
   // Nothing to offer without a sheet - and no error box either, because a
   // failed background fetch is not something the writer asked for.
   await waitFor(() =>
-    expect(screen.queryByRole("region", { name: "Compile" })).not.toBeInTheDocument(),
+    expect(screen.queryByRole("region", { name: "Сборка" })).not.toBeInTheDocument(),
   );
-  expect(screen.queryByRole("button", { name: "Save styles" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Сохранить стили" })).not.toBeInTheDocument();
 });

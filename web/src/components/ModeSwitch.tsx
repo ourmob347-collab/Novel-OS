@@ -27,7 +27,7 @@ export default function ModeSwitch({ className = "" }: { className?: string }) {
   return (
     <div
       role="radiogroup"
-      aria-label="Studio mode"
+      aria-label="Режим студии"
       className={`inline-flex items-center gap-0.5 rounded-xl bg-paper-line/50 p-0.5 ${className}`}
     >
       {STUDIO_MODES.map((m, i) => (

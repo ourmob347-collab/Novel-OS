@@ -6,6 +6,7 @@ Central orchestration system that coordinates agents through the novel writing w
 
 import json
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -25,6 +26,42 @@ from state_parser import ingest_agent_output
 from continuity_engine import run_all as run_continuity_checks, summarize as summarize_findings, to_context_block
 from prose_sanitize import sanitize_manuscript, apply_header_to_chapter, strip_em_dashes
 from context_pack import build_context_pack, format_context_pack, slice_chapter_for_llm
+
+
+_OUTLINE_HEAD = re.compile(
+    r"^#{1,3}[ \t]*(?:глава|chapter)?[ \t]*(\d+)[ \t]*[:.。—–-][ \t]*(.+?)\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_OUTLINE_POV = re.compile(
+    r"^(?:от лица|pov|точка зрения)[ \t]*[:：][ \t]*(.+?)\s*$",
+    re.IGNORECASE,
+)
+
+
+def parse_book_outline(text: str) -> list[dict]:
+    """Pull chapter number, title, POV and synopsis out of an Architect outline."""
+    matches = list(_OUTLINE_HEAD.finditer(text or ""))
+    chapters: list[dict] = []
+    for i, match in enumerate(matches):
+        start = match.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        body = text[start:end].strip()
+        pov = ""
+        lines: list[str] = []
+        for line in body.splitlines():
+            pov_match = _OUTLINE_POV.match(line.strip())
+            if pov_match and not pov:
+                pov = pov_match.group(1).strip()
+                continue
+            lines.append(line)
+        synopsis = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+        chapters.append({
+            "number": int(match.group(1)),
+            "title": match.group(2).strip(),
+            "pov": pov,
+            "synopsis": synopsis,
+        })
+    return chapters
 
 
 class NovelOrchestrator:
@@ -75,7 +112,9 @@ class NovelOrchestrator:
         except LLMError as e:
             print(f"❌ LLM call failed: {e}")
             print(f"   Prompt saved at {prompt_path} you can run it manually.")
-            return None
+            raise LLMError(
+                f"Модель не ответила: {e}. Промпт сохранён в {prompt_path.name}."
+            ) from e
 
         # Ingest structured blocks from the raw agent response first.
         if chapter_number is not None:
@@ -306,33 +345,98 @@ class NovelOrchestrator:
     # ===== Planning Phase =====
     
     def plan_outline(self, num_chapters: int = 32, target_words: int = 80000):
-        """Generate a high-level story outline using the Architect agent."""
+        """Ask the Architect for a book outline and put the chapters on the board."""
+        num_chapters = max(1, int(num_chapters))
+        target_words = max(1, int(target_words))
         print("\n🏗️  ARCHITECT: Creating story outline...")
         print(f"   Target: {num_chapters} chapters, ~{target_words:,} words")
-        
-        # This would typically call an AI agent
-        # For now, we create a template outline
-        
+
+        title = self.state.metadata.get("title") or "Untitled"
+        genre = self.state.metadata.get("genre") or "Unknown"
+        premise = (
+            self.state.metadata.get("premise")
+            or self.state.story_bible.get("premise")
+            or ""
+        )
+        per_chapter = max(1, target_words // num_chapters)
+        prompt = f"""# ARCHITECT TASK: Outline the book
+
+Plan the whole book. Do not write prose or dialogue.
+
+- Title: {title}
+- Genre: {genre}
+- Premise: {premise or "[Not provided]"}
+- Chapters: {num_chapters}
+- Target length: about {target_words} words ({per_chapter} words per chapter)
+
+Write in the same language as the title and the premise.
+
+Use this heading for every chapter, and nothing else between chapters:
+
+## Глава 1 — Название
+От лица: имя героя
+Один абзац: что происходит в главе и чем она кончается.
+
+Number the chapters from 1 through {num_chapters}. One heading per chapter.
+"""
+        result = self._run_agent_or_save_prompt(
+            agent_name="architect",
+            user_prompt=prompt,
+            prompt_path=self.outputs_dir / "outline_prompt.md",
+            output_path=self.outputs_dir / "outline.md",
+            dry_run=False,
+            label="Architect planning the book",
+        )
+        if not result:
+            raise LLMError("Архитектор не вернул план.")
+        parsed = parse_book_outline(result)
+        if not parsed:
+            raise LLMError("Архитектор вернул план без глав. Запустите ещё раз.")
+
+        for item in parsed:
+            number = item["number"]
+            chapter = self.state.get_chapter(number)
+            if chapter and chapter.status != "planned" and (chapter.word_count or 0) > 0:
+                continue
+            if chapter is None:
+                chapter = self.state.create_chapter(number, item["title"])
+            chapter.title = item["title"] or chapter.title
+            if item["pov"]:
+                chapter.pov_character = item["pov"]
+            chapter.status = "planned"
+            chapter.target_word_count = per_chapter
+            if item["synopsis"]:
+                chapter.plot_advances = [item["synopsis"]]
+        self.state.save_state()
+
+        for item in parsed:
+            node = self.state.binder.chapter_node(item["number"])
+            if node is None:
+                continue
+            if item["title"]:
+                node.title = item["title"]
+            if item["synopsis"]:
+                node.synopsis = item["synopsis"]
+            if item["pov"]:
+                node.pov = item["pov"]
+        self.state.save_state()
+
         outline = {
-            'metadata': {
-                'title': self.state.metadata.get('title', 'Untitled'),
-                'genre': self.state.metadata.get('genre', 'Unknown'),
-                'target_chapters': num_chapters,
-                'target_word_count': target_words,
-                'created': datetime.now().isoformat()
+            "metadata": {
+                "title": title,
+                "genre": genre,
+                "target_chapters": num_chapters,
+                "target_word_count": target_words,
+                "created": datetime.now().isoformat(),
             },
-            'acts': self._generate_act_structure(num_chapters),
-            'chapter_summaries': self._generate_chapter_templates(num_chapters)
+            "chapter_summaries": parsed,
         }
-        
-        # Save outline
         outline_path = self.outputs_dir / "outline.json"
-        with open(outline_path, 'w', encoding='utf-8') as f:
-            json.dump(outline, f, indent=2)
-        
-        print(f"✅ Outline created: {outline_path}")
-        print(f"\n📝 Next: Review outline.json and run 'plan chapter --number 1'")
-        
+        outline_path.write_text(
+            json.dumps(outline, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        print(f"✅ Outline created: {self.outputs_dir / 'outline.md'}")
         return outline
     
     def _generate_act_structure(self, num_chapters: int) -> List[Dict]:

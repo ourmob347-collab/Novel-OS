@@ -47,7 +47,7 @@ beforeEach(() => {
 
 test("draws one bar per chapter, each linking to it", async () => {
   renderShape();
-  const strip = await screen.findByRole("list", { name: "Chapters" });
+  const strip = await screen.findByRole("list", { name: "Главы" });
   const bars = within(strip).getAllByRole("listitem");
   expect(bars).toHaveLength(5);
   expect(bars[0]).toHaveAttribute("href", "/projects/book/chapters/1");
@@ -55,13 +55,13 @@ test("draws one bar per chapter, each linking to it", async () => {
 
 test("each bar describes itself for screen readers", async () => {
   renderShape();
-  expect(await screen.findByLabelText(/Chapter 1: Ch 1 — 4 changes/)).toBeInTheDocument();
+  expect(await screen.findByLabelText(/Глава 1: Ch 1 — 4 сдвигов/)).toBeInTheDocument();
 });
 
 test("a stalled chapter says so in its label, not only in colour", async () => {
   renderShape();
   expect(
-    await screen.findByLabelText(/Chapter 3.*part of a stalled run/),
+    await screen.findByLabelText(/Глава 3.*часть провисания/),
   ).toBeInTheDocument();
 });
 
@@ -71,13 +71,13 @@ test("an unwritten chapter is called out rather than shown as flat", async () =>
     stalls: [],
   });
   renderShape();
-  expect(await screen.findByLabelText(/Chapter 2.*not written yet/)).toBeInTheDocument();
+  expect(await screen.findByLabelText(/Глава 2.*ещё не написана/)).toBeInTheDocument();
 });
 
 test("the sagging run is named in plain language", async () => {
   renderShape();
   expect(await screen.findByText(/the protagonist has gone reactive/)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Ch 2–4" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Гл. 2–4" })).toBeInTheDocument();
 });
 
 test("a healthy book shows bars and no warnings", async () => {
@@ -86,8 +86,8 @@ test("a healthy book shows bars and no warnings", async () => {
     stalls: [],
   });
   renderShape();
-  await screen.findByRole("list", { name: "Chapters" });
-  expect(screen.queryByRole("list", { name: "Stalled stretches" })).not.toBeInTheDocument();
+  await screen.findByRole("list", { name: "Главы" });
+  expect(screen.queryByRole("list", { name: "Провисания" })).not.toBeInTheDocument();
 });
 
 test("renders nothing for a project with no chapters", async () => {

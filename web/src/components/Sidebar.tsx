@@ -35,9 +35,9 @@ export default function Sidebar() {
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}
             aria-expanded={!collapsed}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}
             className="flex h-8 w-8 items-center justify-center rounded-xl text-ink-muted transition-colors hover:bg-white/70 hover:text-ink-text"
           >
             <Icon
@@ -61,8 +61,8 @@ export default function Sidebar() {
       <nav className={`flex flex-col gap-1.5 ${collapsed ? "px-2" : "px-3"}`}>
         <button
           type="button"
-          title="Search"
-          aria-label="Search"
+          title="Поиск"
+          aria-label="Поиск"
           onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
           className={`flex h-11 items-center rounded-2xl text-[13px] font-medium text-ink-muted transition-colors duration-150 hover:bg-white/70 hover:text-ink-text ${
             collapsed ? "justify-center px-0" : "justify-between gap-3 px-3.5"
@@ -70,7 +70,7 @@ export default function Sidebar() {
         >
           <span className={`flex items-center ${collapsed ? "" : "gap-2.5"}`}>
             <Icon name="search" className="h-4 w-4" />
-            {!collapsed && "Search"}
+            {!collapsed && "Поиск"}
           </span>
           {!collapsed && (
             <kbd className="rounded-md border border-[rgba(74,91,133,0.14)] bg-white/80 px-1.5 py-0.5 text-[9px] font-medium tracking-wide text-ink-muted shadow-sm">
@@ -78,8 +78,8 @@ export default function Sidebar() {
             </kbd>
           )}
         </button>
-        <SideLink to="/" label="Library" hint="Projects" icon="library" end collapsed={collapsed} />
-        <SideLink to="/settings" label="Settings" hint="Models" icon="sparkles" collapsed={collapsed} />
+        <SideLink to="/" label="Библиотека" hint="Проекты" icon="library" end collapsed={collapsed} />
+        <SideLink to="/settings" label="Настройки" hint="Модели" icon="sparkles" collapsed={collapsed} />
       </nav>
 
       {!collapsed && (
@@ -91,7 +91,7 @@ export default function Sidebar() {
             className="glass-card rounded-[20px] px-3.5 py-3.5"
           >
             <p className="text-[12px] leading-relaxed text-ink-muted">
-              Structure first. Prose second. Continuity always.
+              Сначала структура. Потом проза. Непрерывность — всегда.
             </p>
           </motion.div>
         </div>

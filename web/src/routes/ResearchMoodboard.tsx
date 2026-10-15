@@ -38,7 +38,7 @@ export default function ResearchMoodboard() {
           return [item, ...prev];
         });
       }
-      toast("Added to research board", "success");
+      toast("Добавлено на доску", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
     } finally {
@@ -52,7 +52,7 @@ export default function ResearchMoodboard() {
       const updated = await api.updateMedia(id, item.id, { alt: draftAlt.trim() });
       setItems((prev) => prev.map((p) => (p.id === item.id ? updated : p)));
       setEditingId(null);
-      toast("Note saved", "success");
+      toast("Заметка сохранена", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
     }
@@ -60,9 +60,9 @@ export default function ResearchMoodboard() {
 
   async function remove(item: MediaItem) {
     const ok = await confirm({
-      title: "Remove from research",
-      message: "Delete this image from the moodboard?",
-      confirmLabel: "Delete",
+      title: "Убрать из исследования",
+      message: "Удалить это изображение с доски?",
+      confirmLabel: "Удалить",
       danger: true,
     });
     if (!ok) return;
@@ -77,7 +77,7 @@ export default function ResearchMoodboard() {
   if (error) {
     return (
       <Scene>
-        <div className="px-10 py-12 text-[13px] text-ink-muted">Failed to load: {error}</div>
+        <div className="px-10 py-12 text-[13px] text-ink-muted">Не удалось загрузить: {error}</div>
       </Scene>
     );
   }
@@ -96,17 +96,17 @@ export default function ResearchMoodboard() {
               to={`/projects/${id}`}
               className="mb-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-muted transition-colors hover:text-[var(--color-violet)]"
             >
-              ← {project?.title || "Project"}
+              ← {project?.title || "Проект"}
             </Link>
 
             <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="eyebrow">Studio</p>
+                <p className="eyebrow">Студия</p>
                 <h1 className="font-display text-[32px] font-semibold tracking-tight text-ink-text">
-                  Research
+                  Исследование
                 </h1>
                 <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-ink-muted">
-                  Moodboard for reference images, places, and scrap notes. Drop files or upload.
+                  Доска для референсов, мест и черновых заметок. Перетащите файлы или загрузите.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -124,7 +124,7 @@ export default function ResearchMoodboard() {
                   onClick={() => fileRef.current?.click()}
                   className="btn-primary disabled:opacity-40"
                 >
-                  {uploading ? "Uploading…" : "Add images"}
+                  {uploading ? "Загрузка…" : "Добавить изображения"}
                 </button>
               </div>
             </header>
@@ -142,14 +142,14 @@ export default function ResearchMoodboard() {
               {items.length === 0 ? (
                 <div className="text-center">
                   <Icon name="image" className="mx-auto h-8 w-8 text-paper-muted" />
-                  <p className="mt-3 font-display text-[16px] text-ink-text">Empty board</p>
+                  <p className="mt-3 font-display text-[16px] text-ink-text">Доска пуста</p>
                   <p className="mt-1 text-[13px] text-ink-muted">
-                    Drop reference photos here, or use Add images.
+                    Перетащите сюда референсы или нажмите «Добавить изображения».
                   </p>
                 </div>
               ) : (
                 <p className="text-center text-[12.5px] text-ink-muted">
-                  Drop more images anywhere on this board
+                  Перетащите ещё изображения на доску
                 </p>
               )}
             </div>
@@ -175,21 +175,21 @@ export default function ResearchMoodboard() {
                             onChange={(e) => setDraftAlt(e.target.value)}
                             rows={2}
                             className="w-full rounded-xl border border-[rgba(96,112,153,0.16)] bg-white px-3 py-2 text-[13px] text-ink-text"
-                            placeholder="Caption or research note…"
+                            placeholder="Подпись или заметка…"
                           />
                           <div className="flex gap-2">
                             <button type="button" className="btn-primary" onClick={() => void saveAlt(item)}>
-                              Save
+                              Сохранить
                             </button>
                             <button type="button" className="btn-ghost" onClick={() => setEditingId(null)}>
-                              Cancel
+                              Отмена
                             </button>
                           </div>
                         </>
                       ) : (
                         <>
                           <p className="text-[13px] leading-relaxed text-ink-text">
-                            {item.alt || <span className="text-ink-muted">No note yet</span>}
+                            {item.alt || <span className="text-ink-muted">Заметки пока нет</span>}
                           </p>
                           <div className="flex flex-wrap gap-3 text-[12px] font-medium">
                             <button
@@ -200,14 +200,14 @@ export default function ResearchMoodboard() {
                                 setDraftAlt(item.alt || "");
                               }}
                             >
-                              Edit note
+                              Изменить заметку
                             </button>
                             <button
                               type="button"
                               className="text-ink-muted hover:text-ink"
                               onClick={() => void remove(item)}
                             >
-                              Delete
+                              Удалить
                             </button>
                           </div>
                         </>

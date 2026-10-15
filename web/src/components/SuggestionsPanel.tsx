@@ -28,13 +28,13 @@ export default function SuggestionsPanel({
 
   return (
     <section
-      aria-label="Pending changes"
+      aria-label="Ожидающие изменения"
       className="mt-4 rounded-2xl border border-[rgba(104,103,234,0.22)] bg-[rgba(104,103,234,0.05)] px-4 py-3"
     >
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-text">
           <Icon name="git-branch" className="h-3.5 w-3.5 text-[var(--color-violet)]" />
-          {suggestions.length} pending {suggestions.length === 1 ? "change" : "changes"}
+          {pendingHeading(suggestions.length)}
         </p>
         <div className="flex gap-2">
           <button
@@ -42,14 +42,14 @@ export default function SuggestionsPanel({
             className="btn-ghost px-2.5 py-1 text-[12px]"
             onClick={() => onChange(rejectAllSuggestions(doc))}
           >
-            Reject all
+            Отклонить всё
           </button>
           <button
             type="button"
             className="btn-secondary px-2.5 py-1 text-[12px]"
             onClick={() => onChange(acceptAllSuggestions(doc))}
           >
-            Accept all
+            Принять всё
           </button>
         </div>
       </div>
@@ -69,7 +69,7 @@ export default function SuggestionsPanel({
                     : "bg-[rgba(200,80,100,0.14)] text-[#a8324a]"
                 }`}
               >
-                {isInsert ? "Insert" : "Delete"}
+                {isInsert ? "Вставка" : "Удаление"}
               </span>
               <span
                 className={`min-w-0 flex-1 truncate text-[13px] text-ink-text ${
@@ -85,19 +85,19 @@ export default function SuggestionsPanel({
               <span className="flex shrink-0 gap-1">
                 <button
                   type="button"
-                  aria-label={`Reject ${isInsert ? "insertion" : "deletion"}`}
+                  aria-label={`Отклонить ${isInsert ? "вставку" : "удаление"}`}
                   className="btn-ghost px-2 py-0.5 text-[12px]"
                   onClick={() => onChange(rejectSuggestion(doc, s.id))}
                 >
-                  Reject
+                  Отклонить
                 </button>
                 <button
                   type="button"
-                  aria-label={`Accept ${isInsert ? "insertion" : "deletion"}`}
+                  aria-label={`Принять ${isInsert ? "вставку" : "удаление"}`}
                   className="btn-secondary px-2 py-0.5 text-[12px]"
                   onClick={() => onChange(acceptSuggestion(doc, s.id))}
                 >
-                  Accept
+                  Принять
                 </button>
               </span>
             </li>
@@ -106,4 +106,16 @@ export default function SuggestionsPanel({
       </ul>
     </section>
   );
+}
+
+function pendingHeading(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  const word =
+    mod10 === 1 && mod100 !== 11
+      ? "изменение"
+      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+        ? "изменения"
+        : "изменений";
+  return `${n} ${word} на рассмотрении`;
 }

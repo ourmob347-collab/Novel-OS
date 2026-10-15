@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import RichTextEditor, { type CommentAnchor } from "./RichTextEditor";
 import SuggestionsPanel from "./SuggestionsPanel";
@@ -25,10 +25,56 @@ import LinkCodexModal from "./LinkCodexModal";
 import EntityPopover from "./EntityPopover";
 import ConsequencePreviewModal from "./ConsequencePreview";
 import { type ConsequencePreview as ConsequencePreviewPayload } from "../api/client";
+import { charsInDoc, locateQuote } from "../lib/findQuote";
+
+export type ApplyQuoteResult = "applied" | "missing" | "not-ready";
+
+export type FinalEditorHandle = {
+  /** True once the clean-copy editor can take a rewrite. */
+  editorReady: () => boolean;
+  /** Rewrite a critic quote straight into the clean copy. No preview dialog. */
+  applyQuote: (quote: string, instruction: string) => Promise<ApplyQuoteResult>;
+};
 
 const SIZES = [0.95, 1.075, 1.2, 1.35];
 const MEASURES: Record<string, string> = { narrow: "34rem", normal: "42rem", wide: "52rem" };
 type Measure = keyof typeof MEASURES;
+const MEASURE_LABEL: Record<Measure, string> = { narrow: "Узко", normal: "Обычно", wide: "Широко" };
+
+function ruCount(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  const word =
+    mod10 === 1 && mod100 !== 11
+      ? one
+      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+        ? few
+        : many;
+  return `${n.toLocaleString("ru-RU")} ${word}`;
+}
+
+function ruWords(n: number): string {
+  return ruCount(n, "слово", "слова", "слов");
+}
+
+function ruChars(n: number): string {
+  return ruCount(n, "символ", "символа", "символов");
+}
+
+/** Visible prose. Paragraph breaks are whitespace for words, not extra symbols. */
+function proseStats(doc: PMDoc | null | undefined): { words: number; chars: number } {
+  const parts: string[] = [];
+  const walk = (node: PMDoc | undefined) => {
+    if (!node) return;
+    if (typeof node.text === "string") parts.push(node.text);
+    for (const child of (node.content || []) as PMDoc[]) walk(child);
+  };
+  walk(doc ?? undefined);
+  const chars = parts.reduce((n, part) => n + part.length, 0);
+  const trimmed = parts.join(" ").trim();
+  const words = trimmed ? trimmed.split(/\s+/).length : 0;
+  return { words, chars };
+}
 
 function usePersisted<T>(key: string, initial: T): [T, (v: T) => void] {
   const [v, setV] = useState<T>(() => {
@@ -43,7 +89,7 @@ function countWords(text: string) {
   return t ? t.split(/\s+/).length : 0;
 }
 
-export default function FinalEditor(props: {
+const FinalEditor = forwardRef<FinalEditorHandle, {
   projectId: string;
   chapterNumber: number;
   hasFinal: boolean;
@@ -61,13 +107,17 @@ export default function FinalEditor(props: {
   onToggleFocus: () => void;
   onCommentSelection?: (sel: { from: number; to: number; quote: string }) => void;
   commentAnchors?: CommentAnchor[];
-}) {
+  onEditorReady?: () => void;
+}>(function FinalEditor(props, ref) {
   const {
-    projectId, chapterNumber, hasFinal, canPromote, promoteFrom, doc, wordCount, onChange, onSave, onPromote,
+    projectId, chapterNumber, hasFinal, canPromote, promoteFrom, doc, onChange, onSave, onPromote,
     dirty, busy, lastSaved, focus, onToggleFocus, onCommentSelection, commentAnchors = [],
+    onEditorReady,
   } = props;
 
   const handleRef = useRef<EditorHandle | null>(null);
+  const onEditorReadyRef = useRef(onEditorReady);
+  onEditorReadyRef.current = onEditorReady;
   const [editor, setEditor] = useState<Editor | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"write" | "preview">("write");
@@ -75,12 +125,12 @@ export default function FinalEditor(props: {
   // Attribution reuses the persona convention comments already follow. Single
   // writer today, so it labels rather than authenticates - real identities
   // arrive with P7 auth on the existing tenancy tables.
-  const [authorName] = usePersisted("novelos-author-name", "You");
+  const [authorName] = usePersisted("novelos-author-name", "Вы");
   const [sizeIdx, setSizeIdx] = usePersisted("novelos-editor-size", 1);
   const [measure, setMeasure] = usePersisted<Measure>("novelos-editor-measure", "normal");
   const [readerFont, setReaderFontState] = useState<ReaderFont>(getReaderFont);
   const [uploading, setUploading] = useState(false);
-  const [liveWords, setLiveWords] = useState(wordCount ?? 0);
+  const [liveStats, setLiveStats] = useState(() => proseStats(doc));
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkMode, setLinkMode] = useState<"link" | "create">("link");
   const [seedName, setSeedName] = useState("");
@@ -88,6 +138,7 @@ export default function FinalEditor(props: {
   const [entity, setEntity] = useState<{ x: number; y: number; entry: CodexEntry } | null>(null);
   const [rewriteOpen, setRewriteOpen] = useState(false);
   const [rewriteIntent, setRewriteIntent] = useState<"rewrite" | "expand">("rewrite");
+  const [rewriteInstruction, setRewriteInstruction] = useState("");
   const [rewriteSel, setRewriteSel] = useState<{
     from: number; to: number; quote: string; before: string; after: string;
   } | null>(null);
@@ -103,12 +154,21 @@ export default function FinalEditor(props: {
     if (!sel) return;
     setRewriteSel(sel);
     setRewriteIntent(intent);
+    setRewriteInstruction("");
     setRewriteOpen(true);
   }
 
+  const applyQuoteRef = useRef<FinalEditorHandle["applyQuote"]>(async () => "not-ready");
+  const hasFinalRef = useRef(hasFinal);
+  hasFinalRef.current = hasFinal;
+  useImperativeHandle(ref, () => ({
+    editorReady: () => hasFinalRef.current && !!handleRef.current?.editor,
+    applyQuote: (quote, instruction) => applyQuoteRef.current(quote, instruction),
+  }), []);
+
   async function acceptRewrite(preview: ConsequencePreviewPayload) {
     const ed = handleRef.current?.editor;
-    if (!ed || !rewriteSel) throw new Error("Editor selection lost.");
+    if (!ed || !rewriteSel) throw new Error("Выделение в редакторе потеряно.");
     ed.chain()
       .focus()
       .setTextSelection({ from: rewriteSel.from, to: rewriteSel.to })
@@ -163,20 +223,59 @@ export default function FinalEditor(props: {
   }
 
   const size = SIZES[Math.max(0, Math.min(SIZES.length - 1, sizeIdx))];
-  const words = liveWords;
+  const words = liveStats.words;
+  const chars = liveStats.chars;
+
+  // The manuscript is applied with emitUpdate: false, so the editor never
+  // tells us it changed. Recount whenever the document itself changes.
+  useEffect(() => {
+    setLiveStats(proseStats(doc));
+  }, [doc]);
 
   const onReady = useCallback((h: EditorHandle) => {
     handleRef.current = h;
     // The selection bar subscribes to editor events, so it needs the instance
     // as state - a ref read during render would not re-render it into place.
     setEditor(h.editor);
-    setLiveWords(countWords(h.getText()));
+    const text = h.getText();
+    if (text.trim()) setLiveStats({ words: countWords(text), chars: text.length });
+    onEditorReadyRef.current?.();
   }, []);
 
   function handleChange(next: PMDoc) {
     onChange(next);
-    setLiveWords(countWords(handleRef.current?.getText() ?? ""));
+    setLiveStats(proseStats(next));
   }
+
+  applyQuoteRef.current = async (quote, instruction) => {
+    const editor = handleRef.current?.editor;
+    if (!hasFinal) return "missing";
+    if (!editor) return "not-ready";
+    const range = locateQuote(charsInDoc(editor.state.doc), quote);
+    if (!range) return "missing";
+    const docNode = editor.state.doc;
+    const before = docNode.textBetween(Math.max(0, range.from - 500), range.from, "\n");
+    const after = docNode.textBetween(range.to, Math.min(docNode.content.size, range.to + 500), "\n");
+    const shown = docNode.textBetween(range.from, range.to, "\n");
+    editor.chain().focus().setTextSelection(range).scrollIntoView().run();
+    const preview = await api.previewConsequence(projectId, chapterNumber, {
+      selection: shown,
+      instruction,
+      before_context: before,
+      after_context: after,
+    });
+    editor.chain().focus().setTextSelection(range).insertContent(preview.rewritten).run();
+    const nextDoc = editor.getJSON() as PMDoc;
+    handleChange(nextDoc);
+    const saved = await api.acceptConsequence(projectId, chapterNumber, {
+      preview_id: preview.preview_id,
+      rewritten: preview.rewritten,
+      doc: nextDoc,
+      state_delta: preview.state_delta,
+    });
+    handleChange(saved.final.doc as PMDoc);
+    return "applied";
+  };
 
   function openLink(nextMode: "link" | "create") {
     const sel = handleRef.current?.getSelection();
@@ -204,10 +303,10 @@ export default function FinalEditor(props: {
   if (!hasFinal) {
     return (
       <div className="manuscript-page mx-auto max-w-[680px] px-11 py-14 text-center">
-        <p className="font-display text-[20px] text-ink-text">No Final yet</p>
+        <p className="font-display text-[20px] text-ink-text">Чистовика ещё нет</p>
         <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-ink-muted">
-          The Final is the human-reviewed, canonical chapter. Promote the latest AI stage to
-          start reviewing your drafts stay untouched as provenance.
+          Чистовик — каноническая глава после вашей проверки. Перенесите последний этап ИИ,
+          чтобы начать работу. Черновики останутся нетронутым источником.
         </p>
         <button
           type="button"
@@ -215,7 +314,7 @@ export default function FinalEditor(props: {
           disabled={!canPromote || busy != null}
           className="btn-primary mt-6 disabled:opacity-40"
         >
-          {busy === "promoting" ? "Promoting…" : canPromote ? `Promote ${promoteFrom} → Final` : "Nothing to Promote Yet"}
+          {busy === "promoting" ? "Переносим…" : canPromote ? `Перенести: ${promoteFrom} → Чистовик` : "Пока нечего переносить"}
         </button>
       </div>
     );
@@ -227,32 +326,32 @@ export default function FinalEditor(props: {
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-2 text-[12px] font-medium tracking-[-0.01em] text-ink-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-ink" />
-            Final · {mode === "write" ? "Editing" : "Preview"}
+            Чистовик · {mode === "write" ? "Редактирование" : "Просмотр"}
           </span>
-          <button type="button" onClick={onToggleFocus} className="btn-ghost" title="Focus mode">
-            {focus ? "Exit focus" : "Focus"}
+          <button type="button" onClick={onToggleFocus} className="btn-ghost" title="Режим фокуса">
+            {focus ? "Выйти из фокуса" : "Фокус"}
           </button>
         </div>
 
         <div className="flex items-center gap-3 text-[12.5px] text-ink-muted">
-          <span className="nums">{words.toLocaleString()} words</span>
+          <span className="nums">{ruWords(words)} · {ruChars(chars)}</span>
           <span aria-live="polite" className="min-w-[78px] text-right">
-            {busy === "saving" ? <span className="text-paper-muted">Saving…</span>
-              : dirty ? <span className="text-ink-muted">● Unsaved</span>
-              : <span className="text-st-approved">● {lastSaved ? `Saved ${lastSaved}` : "Saved"}</span>}
+            {busy === "saving" ? <span className="text-paper-muted">Сохраняем…</span>
+              : dirty ? <span className="text-ink-muted">● Не сохранено</span>
+              : <span className="text-st-approved">● {lastSaved ? `Сохранено ${lastSaved}` : "Сохранено"}</span>}
           </span>
 
           <div className="flex items-center overflow-hidden rounded-full border border-paper-line bg-[var(--color-surface-warm)]">
             <button type="button" onClick={() => setSizeIdx(Math.max(0, sizeIdx - 1))}
-                    className="px-2.5 py-1 text-ink-muted hover:text-ink" aria-label="Smaller text">A−</button>
+                    className="px-2.5 py-1 text-ink-muted hover:text-ink" aria-label="Уменьшить текст">A−</button>
             <button type="button" onClick={() => setSizeIdx(Math.min(SIZES.length - 1, sizeIdx + 1))}
-                    className="border-l border-paper-line px-2.5 py-1 text-ink-muted hover:text-ink" aria-label="Larger text">A+</button>
+                    className="border-l border-paper-line px-2.5 py-1 text-ink-muted hover:text-ink" aria-label="Увеличить текст">A+</button>
             <button type="button" onClick={() => setMeasure(measure === "wide" ? "narrow" : measure === "narrow" ? "normal" : "wide")}
                     className="border-l border-paper-line px-2.5 py-1 text-[11px] font-medium tracking-[-0.01em] text-ink-muted hover:text-ink"
-                    title="Reading width">{measure}</button>
+                    title="Ширина колонки">{MEASURE_LABEL[measure]}</button>
             <div className="border-l border-paper-line pl-1">
               <ChoiceGroup
-                label="Reading font"
+                label="Шрифт чтения"
                 variant="segmented"
                 size="sm"
                 value={readerFont}
@@ -284,40 +383,40 @@ export default function FinalEditor(props: {
               <button key={m} type="button" onClick={() => setMode(m)}
                       className={`rounded-full px-3 py-1 text-[12.5px] font-medium capitalize transition-colors ${
                         mode === m ? "bg-ink text-on-ink" : "text-ink-muted hover:text-ink"}`}>
-                {m}
+                {m === "write" ? "Письмо" : "Просмотр"}
               </button>
             ))}
           </div>
           <button type="button" onClick={onSave} disabled={!dirty || busy != null}
                   className="btn-primary disabled:opacity-40">
-            {busy === "saving" ? "Saving…" : "Save"}
+            {busy === "saving" ? "Сохраняем…" : "Сохранить"}
           </button>
         </div>
       </div>
 
       {mode === "write" && (
         <div className="mb-2 flex items-center gap-1" style={{ maxWidth: MEASURES[measure], marginInline: "auto" }}>
-          <TBtn onClick={() => toggleBold(handleRef.current)} label="Bold"><b>B</b></TBtn>
-          <TBtn onClick={() => toggleItalic(handleRef.current)} label="Italic"><i>I</i></TBtn>
-          <TBtn onClick={() => setHeading(handleRef.current, 2)} label="Heading">H</TBtn>
-          <TBtn onClick={() => toggleBlockquote(handleRef.current)} label="Quote">”</TBtn>
-          <TBtn onClick={() => insertSceneBreak(handleRef.current)} label="Scene break">✦</TBtn>
+          <TBtn onClick={() => toggleBold(handleRef.current)} label="Жирный"><b>B</b></TBtn>
+          <TBtn onClick={() => toggleItalic(handleRef.current)} label="Курсив"><i>I</i></TBtn>
+          <TBtn onClick={() => setHeading(handleRef.current, 2)} label="Заголовок">H</TBtn>
+          <TBtn onClick={() => toggleBlockquote(handleRef.current)} label="Цитата">”</TBtn>
+          <TBtn onClick={() => insertSceneBreak(handleRef.current)} label="Разрыв сцены">✦</TBtn>
           <div className="mx-1 h-5 w-px bg-paper-line" />
           <button
             type="button"
             aria-pressed={suggesting}
             onClick={() => setSuggesting(!suggesting)}
-            title="Suggest mode — edits become tracked proposals"
+            title="Режим предложений — правки становятся отслеживаемыми"
             className={`rounded-lg px-2 py-1 text-[12px] font-medium transition ${
               suggesting
                 ? "bg-[var(--color-violet)] text-white"
                 : "text-ink-muted hover:bg-paper-line/60"
             }`}
           >
-            Suggest
+            Предложить
           </button>
           <div className="mx-1 h-5 w-px bg-paper-line" />
-          <TBtn onClick={() => fileRef.current?.click()} label="Insert image">
+          <TBtn onClick={() => fileRef.current?.click()} label="Вставить изображение">
             {uploading ? "…" : "▣"}
           </TBtn>
           <TBtn
@@ -325,7 +424,7 @@ export default function FinalEditor(props: {
               const sel = handleRef.current?.getSelection();
               if (sel) onCommentSelection?.(sel);
             }}
-            label="Comment on selection"
+            label="Комментарий к выделению"
           >
             ¶
           </TBtn>
@@ -400,8 +499,8 @@ export default function FinalEditor(props: {
         afterContext={rewriteSel?.after ?? ""}
         initialInstruction={
           rewriteIntent === "expand"
-            ? "Expand this moment. Keep my voice and the same events."
-            : ""
+            ? "Разверни этот момент. Сохрани мой голос и те же события."
+            : rewriteInstruction
         }
         onAccept={acceptRewrite}
       />
@@ -425,7 +524,9 @@ export default function FinalEditor(props: {
       />
     </div>
   );
-}
+});
+
+export default FinalEditor;
 
 function TBtn({ children, onClick, label }: { children: React.ReactNode; onClick: () => void; label: string }) {
   return (

@@ -22,7 +22,7 @@ function tileFor(id: string) {
 function when(iso: string | null | undefined) {
   if (!iso) return null;
   try {
-    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return new Date(iso).toLocaleDateString("ru-RU", { month: "short", day: "numeric" });
   } catch {
     return null;
   }
@@ -52,7 +52,7 @@ export default function ProjectCard({ p }: { p: ProjectSummary }) {
           <StatusPill status={p.status} />
           {p.content_rating === "mature" && (
             <span className="rounded-full border border-[rgba(200,81,119,0.25)] bg-[#ffeaf1] px-2 py-0.5 text-[10px] font-medium text-[#c85177]">
-              Mature
+              18+
             </span>
           )}
         </div>
@@ -63,7 +63,7 @@ export default function ProjectCard({ p }: { p: ProjectSummary }) {
           {p.title}
         </span>
         <span className="block truncate text-[13px] text-ink-muted">
-          {p.genre || "Untitled genre"}
+          {p.genre || "Жанр не указан"}
           {p.author ? ` · ${p.author}` : ""}
         </span>
       </div>
@@ -77,7 +77,7 @@ export default function ProjectCard({ p }: { p: ProjectSummary }) {
         </div>
         <div className="flex items-center justify-between text-[12px] text-ink-muted">
           <span className="nums">
-            {(p.word_count ?? 0).toLocaleString()} words · {p.drafted_count ?? 0}/{p.chapter_count} chapters
+            {(p.word_count ?? 0).toLocaleString("ru-RU")} слов · {p.drafted_count ?? 0}/{p.chapter_count} глав
           </span>
           <span className="flex items-center gap-1.5">
             {touched && <span>{touched}</span>}

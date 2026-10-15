@@ -4,21 +4,21 @@ import Icon, { type IconName } from "./Icon";
 export type StageKey = "outline" | "draft" | "revised" | "final";
 
 const STAGES: { key: StageKey; label: string; agent: string; icon: IconName }[] = [
-  { key: "outline", label: "Outline", agent: "Architect", icon: "compass" },
-  { key: "draft", label: "Draft", agent: "Scribe", icon: "pen-line" },
-  { key: "revised", label: "Revised", agent: "Editor", icon: "scissors" },
-  { key: "final", label: "Final", agent: "You", icon: "scroll-text" },
+  { key: "outline", label: "План", agent: "Архитектор", icon: "compass" },
+  { key: "draft", label: "Черновик", agent: "Писец", icon: "pen-line" },
+  { key: "revised", label: "Правка", agent: "Редактор", icon: "scissors" },
+  { key: "final", label: "Чистовик", agent: "Вы", icon: "scroll-text" },
 ];
 
 function agentLabel(fallback: string, prov?: StageProvenance) {
   const raw = (prov?.produced_by_agent || "").trim();
   if (!raw) return fallback;
   const pretty: Record<string, string> = {
-    architect: "Architect",
-    scribe: "Scribe",
-    editor: "Editor",
-    continuity_guardian: "Guardian",
-    author: "You",
+    architect: "Архитектор",
+    scribe: "Писец",
+    editor: "Редактор",
+    continuity_guardian: "Страж",
+    author: "Вы",
   };
   return pretty[raw] || raw;
 }
@@ -41,14 +41,14 @@ export default function PipelineFlow({
         const present = stages[s.key] != null;
         const isSel = selected === s.key;
         const prov = provenance[s.key];
-        const who = present ? agentLabel(s.agent, prov) : "Not run";
+        const who = present ? agentLabel(s.agent, prov) : "Не запускалось";
         const model = (prov?.produced_by_model || "").trim();
         const needsReview =
           present
           && (s.key === "draft" || s.key === "revised")
           && !(prov?.reviewed_by || "").trim();
         const sub = needsReview
-          ? `${who} · Needs review`
+          ? `${who} · Нужна проверка`
           : model && present
             ? `${who} · ${model}`
             : who;
@@ -60,14 +60,14 @@ export default function PipelineFlow({
             title={
               present
                 ? [
-                    needsReview ? "Needs review" : null,
-                    prov?.updated_at ? `Updated ${prov.updated_at}` : null,
-                    prov?.reviewed_by ? `Reviewed by ${prov.reviewed_by}` : null,
-                    prov?.word_count ? `${prov.word_count} words` : null,
+                    needsReview ? "Нужна проверка" : null,
+                    prov?.updated_at ? `Обновлено ${prov.updated_at}` : null,
+                    prov?.reviewed_by ? `Проверил ${prov.reviewed_by}` : null,
+                    prov?.word_count ? `${prov.word_count} слов` : null,
                   ]
                     .filter(Boolean)
                     .join(" · ") || s.label
-                : `${s.label} not generated yet`
+                : `${s.label} ещё не готов`
             }
             className={`group flex flex-1 flex-col items-start rounded-2xl px-3.5 py-2.5 text-left transition-all duration-200 ${
               isSel

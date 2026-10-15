@@ -4,6 +4,15 @@ import { Command } from "cmdk";
 import { AnimatePresence, motion } from "motion/react";
 import { api, type ProjectSummary, type ChapterSummary, type SearchHit } from "../api/client";
 
+const KIND_LABEL: Record<string, string> = {
+  character: "персонаж",
+  location: "место",
+  worldbuilding: "мир",
+  item: "предмет",
+  chapter: "глава",
+  relationship: "связь",
+};
+
 function currentProjectId(pathname: string): string | null {
   const m = pathname.match(/^\/projects\/([^/]+)/);
   return m ? m[1] : null;
@@ -98,35 +107,35 @@ export default function CommandPalette() {
             className="glass-shell relative w-full max-w-lg overflow-hidden p-2.5"
           >
             <div className="glass-panel overflow-hidden">
-              <Command label="Command Menu" className="flex flex-col" shouldFilter={visibleHits.length === 0}>
+              <Command label="Меню команд" className="flex flex-col" shouldFilter={visibleHits.length === 0}>
                 <Command.Input
                   autoFocus
                   value={query}
                   onValueChange={setQuery}
-                  placeholder={pid ? "Search Codex, chapters, or jump…" : "Jump to a project…"}
+                  placeholder={pid ? "Искать в Кодексе, главах или перейти…" : "Перейти к проекту…"}
                   className="border-b border-[rgba(74,91,133,0.12)] bg-transparent px-5 py-4 text-[15px] text-ink-text outline-none placeholder:text-paper-muted"
                 />
                 <Command.List className="max-h-[52vh] overflow-y-auto p-2">
                   <Command.Empty className="px-3 py-6 text-center text-[13.5px] text-ink-muted">
-                    No matches.
+                    Ничего не найдено.
                   </Command.Empty>
 
-                  <Group heading="Actions">
-                    <Item onSelect={() => go("/")}>Go to Library</Item>
+                  <Group heading="Действия">
+                    <Item onSelect={() => go("/")}>В библиотеку</Item>
                     {pid && (
-                      <Item onSelect={() => go(`/projects/${pid}/chart`)}>Open relationship chart</Item>
+                      <Item onSelect={() => go(`/projects/${pid}/chart`)}>Открыть схему связей</Item>
                     )}
                   </Group>
 
                   {pid && visibleHits.length > 0 && (
-                    <Group heading="Search">
+                    <Group heading="Поиск">
                       {visibleHits.map((h) => (
                         <Item
                           key={`${h.kind}-${h.id}`}
                           value={`${h.kind} ${h.label} ${h.subtitle || ""}`}
                           onSelect={() => openHit(h)}
                         >
-                          <span className="capitalize text-[11px] text-paper-muted">{h.kind}</span>
+                          <span className="capitalize text-[11px] text-paper-muted">{KIND_LABEL[h.kind] ?? h.kind}</span>
                           <span className="ml-2 truncate">{h.label}</span>
                         </Item>
                       ))}
@@ -134,18 +143,18 @@ export default function CommandPalette() {
                   )}
 
                   {pid && chapters.length > 0 && visibleHits.length === 0 && (
-                    <Group heading="Chapters">
+                    <Group heading="Главы">
                       {chapters.map((c) => (
                         <Item key={c.number} value={`chapter ${c.number} ${c.title}`}
                               onSelect={() => go(`/projects/${pid}/chapters/${c.number}`)}>
-                          <span className="font-mono text-[11px] text-paper-muted">Ch {c.number}</span>
-                          <span className="ml-2">{c.title || "Untitled"}</span>
+                          <span className="font-mono text-[11px] text-paper-muted">Гл. {c.number}</span>
+                          <span className="ml-2">{c.title || "Без названия"}</span>
                         </Item>
                       ))}
                     </Group>
                   )}
 
-                  <Group heading="Projects">
+                  <Group heading="Проекты">
                     {projects.map((p) => (
                       <Item key={p.id} value={`project ${p.title} ${p.genre}`}
                             onSelect={() => go(`/projects/${p.id}`)}>
@@ -157,7 +166,7 @@ export default function CommandPalette() {
                 </Command.List>
               </Command>
               <div className="flex items-center gap-3 border-t border-[rgba(74,91,133,0.12)] px-4 py-2 text-[11px] text-paper-muted">
-                <span>↑↓ navigate</span><span>↵ open</span><span>esc close</span>
+                <span>↑↓ выбор</span><span>↵ открыть</span><span>esc закрыть</span>
               </div>
             </div>
           </motion.div>

@@ -147,7 +147,7 @@ def test_a_single_pov_run_names_the_reactive_protagonist(tmp_path):
     for n in (1, 2, 3):
         s.chapters[n] = _flat(n, pov="Lena")
     assert "Lena" in find_stalls(s)[0].reason
-    assert "reactive" in find_stalls(s)[0].reason
+    assert "реактив" in find_stalls(s)[0].reason
 
 
 def test_a_mixed_pov_run_describes_the_stretch_instead(tmp_path):
@@ -156,7 +156,7 @@ def test_a_mixed_pov_run_describes_the_stretch_instead(tmp_path):
     s.chapters[2] = _flat(2, pov="Mara")
     s.chapters[3] = _flat(3, pov="Kesh")
     reason = find_stalls(s)[0].reason
-    assert "no plot advance" in reason
+    assert "без сдвига сюжета" in reason
 
 
 # --------------------------------------------------- continuity integration

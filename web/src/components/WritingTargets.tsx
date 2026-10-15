@@ -103,7 +103,7 @@ export default function WritingTargets({
       });
       onUpdated(p);
       setEditing(false);
-      toast("Targets saved", "success");
+      toast("Цели сохранены", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
     } finally {
@@ -118,7 +118,7 @@ export default function WritingTargets({
     };
     localStorage.setItem(sessionKey(projectId), JSON.stringify(fresh));
     setSession(fresh);
-    toast("Session reset", "success");
+    toast("Сессия сброшена", "success");
   }
 
   return (
@@ -126,22 +126,22 @@ export default function WritingTargets({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-[18px] font-semibold tracking-tight text-ink-text">
-            Writing targets
+            Цели по объёму
           </h2>
           <p className="mt-0.5 text-[12.5px] text-ink-muted">
-            Manuscript · session · ~{readingMin} min reading time
+            Рукопись · сессия · ~{readingMin} мин чтения
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-ghost" onClick={resetSession}>
-            Reset session
+            Сбросить сессию
           </button>
           <button
             type="button"
             className="btn-secondary"
             onClick={() => setEditing((e) => !e)}
           >
-            {editing ? "Cancel" : "Edit targets"}
+            {editing ? "Отмена" : "Изменить цели"}
           </button>
         </div>
       </div>
@@ -149,20 +149,20 @@ export default function WritingTargets({
       <div className="grid gap-6 sm:grid-cols-2">
         <ProgressRing
           value={projectPct}
-          label="Manuscript"
-          sub={`${wordCount.toLocaleString()} / ${(project.target_word_count ?? 80000).toLocaleString()} words`}
+          label="Рукопись"
+          sub={`${wordCount.toLocaleString()} / ${(project.target_word_count ?? 80000).toLocaleString()} слов`}
         />
         <ProgressRing
           value={sessionPct}
-          label="This session"
-          sub={`${sessionWords.toLocaleString()} / ${(project.session_word_target ?? 1000).toLocaleString()} words`}
+          label="Эта сессия"
+          sub={`${sessionWords.toLocaleString()} / ${(project.session_word_target ?? 1000).toLocaleString()} слов`}
         />
       </div>
 
       {editing && (
         <div className="mt-5 grid gap-3 border-t border-[rgba(74,91,133,0.1)] pt-4 sm:grid-cols-[1fr_1fr_auto]">
           <label className="block text-[12px] font-medium text-ink-muted">
-            Project target
+            Цель рукописи
             <input
               type="number"
               min={0}
@@ -173,7 +173,7 @@ export default function WritingTargets({
             />
           </label>
           <label className="block text-[12px] font-medium text-ink-muted">
-            Session target
+            Цель сессии
             <input
               type="number"
               min={0}
@@ -190,7 +190,7 @@ export default function WritingTargets({
               onClick={() => void saveTargets()}
               className="btn-primary w-full disabled:opacity-40 sm:w-auto"
             >
-              {busy ? "Saving…" : "Save"}
+              {busy ? "Сохранение…" : "Сохранить"}
             </button>
           </div>
         </div>

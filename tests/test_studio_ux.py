@@ -24,6 +24,25 @@ def test_llm_status_endpoint(tmp_path, monkeypatch):
     assert "configured" in body
     assert "presets" in body
     assert {p["id"] for p in body["presets"]} >= {"quality", "fast", "local", "mature"}
+    assert body["autonomy_model"] == "anthropic/claude-haiku-5.5"
+
+
+def test_autonomy_model_does_not_replace_studio_model(tmp_path, monkeypatch):
+    client, settings = _client(tmp_path, monkeypatch)
+    put = client.put("/api/studio/llm", json={
+        "provider": "openrouter",
+        "model": "anthropic/claude-sonnet-5",
+    })
+    assert put.status_code == 200, put.text
+    saved = client.put("/api/studio/llm", json={
+        "autonomy_model": "anthropic/claude-haiku-5.5",
+    })
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["model"] == "anthropic/claude-sonnet-5"
+    assert saved.json()["autonomy_model"] == "anthropic/claude-haiku-5.5"
+    on_disk = json.loads(settings.read_text(encoding="utf-8"))
+    assert on_disk["NOVEL_OS_MODEL"] == "anthropic/claude-sonnet-5"
+    assert on_disk["autonomy_model"] == "anthropic/claude-haiku-5.5"
 
 
 def test_llm_put_preset_persists(tmp_path, monkeypatch):

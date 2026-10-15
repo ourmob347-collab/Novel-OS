@@ -11,14 +11,23 @@ type RowMetrics = Partial<Record<MetricKey, number>>;
 
 const COLUMNS: { key: Key; label: string; align?: "right"; title?: string }[] = [
   { key: "number", label: "#" },
-  { key: "title", label: "Title" },
-  { key: "status", label: "Status" },
-  { key: "pov", label: "POV" },
-  { key: "word_count", label: "Words", align: "right" },
-  { key: "tension", label: "Tension", align: "right", title: "1–10 Style Curator heuristic" },
-  { key: "emotional_intensity", label: "Emotion", align: "right", title: "Emotional intensity 1–10" },
-  { key: "pacing", label: "Pace", align: "right", title: "Higher = faster pacing" },
+  { key: "title", label: "Название" },
+  { key: "status", label: "Статус" },
+  { key: "pov", label: "От лица" },
+  { key: "word_count", label: "Слов", align: "right" },
+  { key: "tension", label: "Напряжение", align: "right", title: "Эвристика Куратора стиля, 1–10" },
+  { key: "emotional_intensity", label: "Эмоция", align: "right", title: "Эмоциональная сила, 1–10" },
+  { key: "pacing", label: "Темп", align: "right", title: "Чем выше, тем быстрее темп" },
 ];
+
+function ruPlural(n: number, one: string, few: string, many: string) {
+  const abs = Math.abs(n) % 100;
+  const last = abs % 10;
+  if (abs > 10 && abs < 20) return many;
+  if (last > 1 && last < 5) return few;
+  if (last === 1) return one;
+  return many;
+}
 
 function flattenChapters(nodes: BinderNode[]): BinderNode[] {
   const out: BinderNode[] = [];
@@ -120,7 +129,7 @@ export default function Outliner({ id, chapters }: { id: string; chapters: Chapt
     setBusy(chapterNumber);
     try {
       await api.patchBinderNode(id, slot.nodeId, { synopsis: slot.text });
-      toast("Synopsis saved", "success");
+      toast("Синопсис сохранён", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
     } finally {
@@ -143,8 +152,8 @@ export default function Outliner({ id, chapters }: { id: string; chapters: Chapt
       setMetrics(next);
       toast(
         result.chapters.length
-          ? `Scored ${result.chapters.length} chapter${result.chapters.length === 1 ? "" : "s"}`
-          : "No chapters to score",
+          ? `${ruPlural(result.chapters.length, "Оценена", "Оценены", "Оценено")} ${result.chapters.length} ${ruPlural(result.chapters.length, "глава", "главы", "глав")}`
+          : "Нет глав для оценки",
         "success",
       );
     } catch (e) {
@@ -158,7 +167,7 @@ export default function Outliner({ id, chapters }: { id: string; chapters: Chapt
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[12.5px] text-ink-muted">
-          Outliner · sort any column · tension / emotion / pace from Style Curator heuristics
+          Таблица · любой столбец сортируется · напряжение, эмоция и темп — эвристики Куратора стиля
         </p>
         <button
           type="button"
@@ -166,7 +175,7 @@ export default function Outliner({ id, chapters }: { id: string; chapters: Chapt
           onClick={() => void refreshMetrics()}
           className="rounded-full border border-[rgba(96,112,153,0.16)] bg-white/70 px-3 py-1.5 text-[12px] font-medium text-ink-muted transition-colors hover:text-[var(--color-violet)] disabled:opacity-40"
         >
-          {refreshing ? "Scoring…" : "Refresh metrics"}
+          {refreshing ? "Считаю…" : "Обновить показатели"}
         </button>
       </div>
       <div className="overflow-x-auto overflow-hidden rounded-2xl border border-paper-line bg-paper-card shadow-[var(--shadow-paper)]">
@@ -187,7 +196,7 @@ export default function Outliner({ id, chapters }: { id: string; chapters: Chapt
                 </th>
               ))}
               <th className="px-4 py-3 text-[12px] font-medium tracking-[-0.01em] text-ink-muted">
-                Synopsis
+                Синопсис
               </th>
             </tr>
           </thead>
@@ -209,7 +218,7 @@ export default function Outliner({ id, chapters }: { id: string; chapters: Chapt
                     className="cursor-pointer px-3 py-3 font-display text-[15px] text-ink-text sm:px-4"
                     onClick={() => navigate(`/projects/${id}/chapters/${c.number}`)}
                   >
-                    {c.title || "Untitled"}
+                    {c.title || "Без названия"}
                   </td>
                   <td className="px-3 py-3 sm:px-4"><StatusPill status={c.status} /></td>
                   <td className="px-3 py-3 text-[13px] text-ink-muted sm:px-4">{c.pov || "—"}</td>
@@ -236,7 +245,7 @@ export default function Outliner({ id, chapters }: { id: string; chapters: Chapt
                         }))
                       }
                       onBlur={() => void saveSynopsis(c.number)}
-                      placeholder="Synopsis…"
+                      placeholder="Синопсис…"
                       className="w-full resize-y rounded-lg border border-[rgba(96,112,153,0.14)] bg-white/70 px-2.5 py-1.5 text-[12.5px] leading-relaxed text-ink-text placeholder:text-paper-muted focus:outline-none"
                     />
                   </td>

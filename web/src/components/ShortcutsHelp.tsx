@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import Modal from "./Modal";
 
 const SHORTCUTS: [string, string][] = [
-  ["⌘K  /  Ctrl-K", "Open the command palette"],
-  ["⌘1 / ⌘2 / ⌘3", "Plan · Write · Revise"],
-  ["⌘.  /  Ctrl-.", "Quick note, without leaving the page"],
-  ["[  /  ]", "Previous / next chapter"],
-  ["Ctrl-F", "Find & replace (in the editor)"],
-  ["?", "Show this help"],
+  ["⌘K  /  Ctrl-K", "Открыть палитру команд"],
+  ["⌘1 / ⌘2 / ⌘3", "План · Письмо · Правка"],
+  ["⌘.  /  Ctrl-.", "Быстрая заметка, не уходя со страницы"],
+  ["[  /  ]", "Предыдущая / следующая глава"],
+  ["Ctrl-F", "Найти и заменить (в редакторе)"],
+  ["?", "Показать эту справку"],
 ];
 
 export default function ShortcutsHelp() {
@@ -29,7 +29,7 @@ export default function ShortcutsHelp() {
   }, []);
 
   return (
-    <Modal open={open} onClose={() => setOpen(false)} title="Keyboard shortcuts">
+    <Modal open={open} onClose={() => setOpen(false)} title="Горячие клавиши">
       <dl className="flex flex-col gap-2.5">
         {SHORTCUTS.map(([keys, desc]) => (
           <div key={keys} className="flex items-center justify-between gap-4">

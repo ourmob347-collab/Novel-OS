@@ -1,19 +1,19 @@
 /** Curated genre chips for New Manuscript - keep the list short and hybrid-friendly. */
 export const GENRE_OPTIONS = [
-  "Fantasy",
-  "Romance",
-  "Thriller",
-  "Mystery",
-  "Sci-Fi",
-  "Literary",
-  "Horror",
-  "Historical",
-  "YA",
-  "Adult",
-  "Dark",
-  "Humor",
-  "Adventure",
-  "Contemporary",
+  "Фэнтези",
+  "Романтика",
+  "Триллер",
+  "Детектив",
+  "Научная фантастика",
+  "Литература",
+  "Хоррор",
+  "Историческое",
+  "Подростковое",
+  "Взрослое",
+  "Тёмное",
+  "Юмор",
+  "Приключения",
+  "Современное",
 ] as const;
 
 /** Merge chip selections + Other into the genres array sent to the API. */

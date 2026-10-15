@@ -289,14 +289,25 @@ def ingest_project(root: Path, project_id: str) -> None:
         s.commit()
 
 
-def _get_artifact(s: Session, project_id: str, chapter: int, stage: str) -> Optional[Artifact]:
-    return s.exec(
+def _artifact_rows(s: Session, project_id: str, chapter: int, stage: str) -> list[Artifact]:
+    return list(s.exec(
         select(Artifact).where(
             Artifact.project_id == project_id,
             Artifact.chapter == chapter,
             Artifact.stage == stage,
         )
-    ).first()
+    ).all())
+
+
+def _pick_artifact(rows: list[Artifact]) -> Optional[Artifact]:
+    """Prefer a manuscript that still has words over an empty duplicate row."""
+    if not rows:
+        return None
+    return max(rows, key=lambda a: ((a.word_count or 0), (a.updated_at or ""), a.id or ""))
+
+
+def _get_artifact(s: Session, project_id: str, chapter: int, stage: str) -> Optional[Artifact]:
+    return _pick_artifact(_artifact_rows(s, project_id, chapter, stage))
 
 
 def upsert_artifact(
@@ -312,9 +323,14 @@ def upsert_artifact(
     reviewed_at: Optional[str] = None,
 ) -> None:
     with _session() as s:
-        art = _get_artifact(s, project_id, chapter, stage)
+        rows = _artifact_rows(s, project_id, chapter, stage)
+        art = _pick_artifact(rows)
         if art is None:
             art = Artifact(project_id=project_id, chapter=chapter, stage=stage)
+        else:
+            for extra in rows:
+                if extra.id != art.id:
+                    s.delete(extra)
         art.text = text
         if doc_json is not None:
             art.doc_json = doc_json
@@ -329,6 +345,19 @@ def upsert_artifact(
         if reviewed_at is not None:
             art.reviewed_at = reviewed_at
         s.add(art)
+        s.commit()
+
+
+def collapse_stage_duplicates(project_id: str, chapter: int, stage: str) -> None:
+    """Drop empty duplicate rows so a blank save cannot hide the manuscript."""
+    with _session() as s:
+        rows = _artifact_rows(s, project_id, chapter, stage)
+        best = _pick_artifact(rows)
+        if best is None:
+            return
+        for extra in rows:
+            if extra.id != best.id:
+                s.delete(extra)
         s.commit()
 
 

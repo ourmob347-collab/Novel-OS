@@ -10,5 +10,5 @@ test("renders project cards from the API", async () => {
   ]);
   render(<MemoryRouter><ProjectsList /></MemoryRouter>);
   expect(await screen.findByText("The Last Signal")).toBeInTheDocument();
-  expect(screen.getByText(/3 chapters/i)).toBeInTheDocument();
+  expect(screen.getByText(/3 глав/)).toBeInTheDocument();
 });

@@ -15,9 +15,9 @@
 export type StudioMode = "plan" | "write" | "revise";
 
 export const STUDIO_MODES: { id: StudioMode; label: string; hint: string }[] = [
-  { id: "plan", label: "Plan", hint: "Structure and world" },
-  { id: "write", label: "Write", hint: "Words today, nothing else" },
-  { id: "revise", label: "Revise", hint: "The book as it is" },
+  { id: "plan", label: "План", hint: "Структура и мир" },
+  { id: "write", label: "Письмо", hint: "Слова на сегодня, и ничего больше" },
+  { id: "revise", label: "Правка", hint: "Книга как она есть" },
 ];
 
 const KEY = "novelos-studio-mode";

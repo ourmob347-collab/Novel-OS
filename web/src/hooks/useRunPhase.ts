@@ -3,19 +3,19 @@ import { api } from "../api/client";
 import { useToast } from "../components/toastContext";
 
 const LABELS: Record<string, string> = {
-  plan_outline: "Planning outline",
-  plan_chapter: "Planning chapter",
-  write: "Drafting",
-  edit: "Revising",
-  validate: "Validating",
-  approve: "Approving",
+  plan_outline: "План",
+  plan_chapter: "План главы",
+  write: "Черновик",
+  edit: "Правка",
+  validate: "Проверка",
+  approve: "Утверждение",
 };
 
 /**
  * Runs a pipeline stage as a background job and polls until it finishes.
  * `runningStage` reflects which stage is in flight (for per-button spinners).
  */
-export function useRunPhase(projectId: string, onDone?: () => void) {
+export function useRunPhase(projectId: string, onDone?: (stage: string) => void) {
   const toast = useToast();
   const [runningStage, setRunningStage] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
@@ -39,10 +39,10 @@ export function useRunPhase(projectId: string, onDone?: () => void) {
           if (timer.current) window.clearInterval(timer.current);
           setRunningStage(null);
           if (s.status === "done") {
-            toast(`${LABELS[stage] ?? stage} complete`, "success");
-            onDone?.();
+            toast(`${LABELS[stage] ?? stage} готов`, "success");
+            onDone?.(stage);
           } else {
-            toast(s.error ?? "Agent run failed", "error");
+            toast(s.error ?? "Агент не смог закончить", "error");
           }
         } catch (e) {
           if (timer.current) window.clearInterval(timer.current);

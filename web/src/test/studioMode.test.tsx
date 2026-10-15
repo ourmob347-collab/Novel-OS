@@ -46,12 +46,12 @@ test("Plan shows structure without the notes rail", () => {
 
 test("the switch marks the active mode for assistive tech", async () => {
   render(<ModeSwitch />);
-  const write = screen.getByRole("radio", { name: "Write" });
+  const write = screen.getByRole("radio", { name: "Письмо" });
   expect(write).toHaveAttribute("aria-checked", "true");
 
-  await userEvent.click(screen.getByRole("radio", { name: "Plan" }));
+  await userEvent.click(screen.getByRole("radio", { name: "План" }));
 
-  expect(screen.getByRole("radio", { name: "Plan" })).toHaveAttribute(
+  expect(screen.getByRole("radio", { name: "План" })).toHaveAttribute(
     "aria-checked", "true",
   );
   expect(getStudioMode()).toBe("plan");
@@ -67,11 +67,11 @@ test("two mounted switches stay in step", async () => {
 
   const inA = screen.getByTestId("a");
   await userEvent.click(
-    screen.getAllByRole("radio", { name: "Revise" })[0],
+    screen.getAllByRole("radio", { name: "Правка" })[0],
   );
 
   // Both switchers reflect the change, without a shared provider.
-  for (const el of screen.getAllByRole("radio", { name: "Revise" })) {
+  for (const el of screen.getAllByRole("radio", { name: "Правка" })) {
     expect(el).toHaveAttribute("aria-checked", "true");
   }
   expect(inA).toBeInTheDocument();

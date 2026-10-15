@@ -2,6 +2,7 @@ import { forwardRef } from "react";
 import CodeMirror, { EditorView, type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { search } from "@codemirror/search";
+import { EditorState } from "@codemirror/state";
 
 // Editor styled to read like the manuscript page; colors come from CSS vars so it
 // adapts to light/dark automatically.
@@ -48,6 +49,25 @@ const MarkdownEditor = forwardRef<ReactCodeMirrorRef, {
         markdown({ base: markdownLanguage }),
         EditorView.lineWrapping,
         search({ top: true }),
+        EditorState.phrases.of({
+          Find: "Найти",
+          Replace: "Заменить",
+          next: "далее",
+          previous: "назад",
+          all: "все",
+          "match case": "учитывать регистр",
+          regexp: "регулярное выражение",
+          "by word": "слово целиком",
+          replace: "заменить",
+          "replace all": "заменить всё",
+          close: "закрыть",
+          "current match": "текущее совпадение",
+          "on line": "в строке",
+          "replaced match on line $": "совпадение заменено в строке $",
+          "replaced $ matches": "заменено совпадений: $",
+          "Go to line": "Перейти к строке",
+          go: "перейти",
+        }),
         manuscriptTheme,
       ]}
     />
